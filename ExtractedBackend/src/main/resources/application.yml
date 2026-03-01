@@ -1,0 +1,17 @@
+spring:
+  application:
+    name: extracted-backend
+  data:
+    mongodb:
+      # Read from MONGODB_URI environment variable, with fallback for local development
+      # keep quotes around URI to avoid YAML parsing issues
+      uri: "${MONGODB_URI:mongodb+srv://sawandmagedaragama_db_user:12126441@cluster0.cd2xx6j.mongodb.net/car-rental-db?retryWrites=true&w=majority&appName=Cluster0}"
+      auto-index-creation: true
+
+server:
+  port: 8080
+
+logging:
+  level:
+    root: INFO
+    com.example.backend: DEBUG
