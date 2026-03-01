@@ -1,6 +1,7 @@
 package com.example.backend.controller;
 
 import com.example.backend.service.HealthService;
+import com.example.backend.service.DatabaseStatusService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -22,9 +23,13 @@ public class HealthControllerTest {
     @MockBean
     private HealthService healthService;
 
+    @MockBean
+    private DatabaseStatusService databaseStatusService;
+
     @BeforeEach
     void setup() {
         when(healthService.getStatus()).thenReturn("Backend Running");
+        when(databaseStatusService.getDatabaseStatus()).thenReturn("connected");
     }
 
     @Test
@@ -32,5 +37,21 @@ public class HealthControllerTest {
         mvc.perform(get("/api/health"))
                 .andExpect(status().isOk())
                 .andExpect(content().json("{\"status\":\"Backend Running\"}"));
+    }
+
+    @Test
+    void dbStatusEndpointReturnsConnected() throws Exception {
+        mvc.perform(get("/api/db-status"))
+                .andExpect(status().isOk())
+                .andExpect(content().json("{\"database\":\"connected\"}"));
+    }
+
+    @Test
+    void dbStatusEndpointHandlesDisconnection() throws Exception {
+        when(databaseStatusService.getDatabaseStatus()).thenReturn("disconnected");
+
+        mvc.perform(get("/api/db-status"))
+                .andExpect(status().isOk())
+                .andExpect(content().json("{\"database\":\"disconnected\"}"));
     }
 }
