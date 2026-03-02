@@ -1,0 +1,12 @@
+com\example\backend\model\VehicleType.class
+com\example\backend\repository\VehicleRepository.class
+com\example\backend\config\AppConfig.class
+com\example\backend\BackendApplication.class
+com\example\backend\service\DatabaseStatusService.class
+com\example\backend\config\DataSeeder.class
+com\example\backend\repository\PlaceholderRepository.class
+com\example\backend\model\HealthStatus.class
+com\example\backend\service\HealthService.class
+com\example\backend\controller\HealthController.class
+com\example\backend\model\Vehicle.class
+com\example\backend\repository\VehicleTypeRepository.class
