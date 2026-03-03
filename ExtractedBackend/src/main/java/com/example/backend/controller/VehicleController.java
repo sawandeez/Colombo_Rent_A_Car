@@ -1,7 +1,5 @@
 package com.example.backend.controller;
 
-import com.example.backend.model.Vehicle;
-import com.example.backend.model.VehicleType;
 import com.example.backend.dto.VehicleTypeDto;
 import com.example.backend.repository.VehicleRepository;
 import com.example.backend.service.VehicleTypeService;
@@ -19,15 +17,30 @@ public class VehicleController {
 
     private final VehicleRepository vehicleRepository;
     private final VehicleTypeService vehicleTypeService;
+    private final com.example.backend.service.VehicleService vehicleService;
 
-    public VehicleController(VehicleRepository vehicleRepository, VehicleTypeService vehicleTypeService) {
+    public VehicleController(VehicleRepository vehicleRepository, VehicleTypeService vehicleTypeService,
+                             com.example.backend.service.VehicleService vehicleService) {
         this.vehicleRepository = vehicleRepository;
         this.vehicleTypeService = vehicleTypeService;
+        this.vehicleService = vehicleService;
     }
 
     @GetMapping("/vehicles")
-    public List<Vehicle> getAllVehicles() {
-        return vehicleRepository.findAll();
+    public ResponseEntity<?> getAllVehicles(@org.springframework.web.bind.annotation.RequestParam(value = "typeId", required = false) String typeId) {
+        try {
+            if (typeId != null) {
+                List<com.example.backend.dto.VehicleSummaryDto> filtered = vehicleService.getVehiclesByType(typeId);
+                return ResponseEntity.ok(filtered);
+            }
+            return ResponseEntity.ok(vehicleRepository.findAll());
+        } catch (IllegalArgumentException iae) {
+            log.warn("Bad request in getAllVehicles: {}", iae.getMessage());
+            return ResponseEntity.badRequest().body(iae.getMessage());
+        } catch (Exception e) {
+            log.error("Failed to fetch vehicles", e);
+            return ResponseEntity.status(500).build();
+        }
     }
 
     @GetMapping("/vehicle-types")
