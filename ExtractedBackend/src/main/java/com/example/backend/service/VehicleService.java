@@ -1,7 +1,7 @@
 package com.example.backend.service;
 
-import com.example.backend.dto.VehicleSummaryDto;
 import com.example.backend.model.Vehicle;
+import com.example.backend.model.VehicleType;
 import com.example.backend.repository.VehicleRepository;
 import com.example.backend.repository.VehicleTypeRepository;
 import org.slf4j.Logger;
@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class VehicleService {
@@ -19,27 +18,40 @@ public class VehicleService {
     private final VehicleTypeRepository vehicleTypeRepository;
 
     public VehicleService(VehicleRepository vehicleRepository,
-                          VehicleTypeRepository vehicleTypeRepository) {
+            VehicleTypeRepository vehicleTypeRepository) {
         this.vehicleRepository = vehicleRepository;
         this.vehicleTypeRepository = vehicleTypeRepository;
     }
 
-    public List<VehicleSummaryDto> getVehiclesByType(String typeId) {
+    /**
+     * Returns vehicles whose {@code type} name matches the given {@code typeId}.
+     * <p>
+     * The frontend passes the MongoDB ObjectId of a VehicleType document.
+     * We resolve that id to the type's name first, then use the name to
+     * query the vehicles collection — which stores the type as a plain string.
+     * </p>
+     *
+     * @param typeId the MongoDB ObjectId of the requested VehicleType
+     * @throws IllegalArgumentException if typeId is blank or no matching type is
+     *                                  found
+     */
+    public List<Vehicle> getVehiclesByType(String typeId) {
         logger.debug("Fetching vehicles for typeId={}", typeId);
 
-        if (typeId == null || typeId.isEmpty()) {
+        if (typeId == null || typeId.isBlank()) {
             throw new IllegalArgumentException("typeId must be provided");
         }
 
-        boolean exists = vehicleTypeRepository.existsById(typeId);
-        if (!exists) {
-            logger.warn("Requested vehicle type does not exist: {}", typeId);
-            throw new IllegalArgumentException("Invalid vehicle type id");
-        }
+        // Resolve the ObjectId → VehicleType document → type name
+        VehicleType vehicleType = vehicleTypeRepository.findById(typeId)
+                .orElseThrow(() -> {
+                    logger.warn("No VehicleType found for id={}", typeId);
+                    return new IllegalArgumentException("No vehicle type found for id: " + typeId);
+                });
 
-        List<Vehicle> list = vehicleRepository.findByVehicleTypeId(typeId);
-        return list.stream()
-                .map(v -> new VehicleSummaryDto(v.getName(), v.getThumbnailUrl()))
-                .collect(Collectors.toList());
+        String typeName = vehicleType.getName();
+        logger.debug("Resolved typeId={} to typeName={}", typeId, typeName);
+
+        return vehicleRepository.findByType(typeName);
     }
 }

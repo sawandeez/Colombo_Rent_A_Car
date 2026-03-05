@@ -1,6 +1,7 @@
 package com.example.backend.controller;
 
 import com.example.backend.dto.VehicleTypeDto;
+import com.example.backend.model.Vehicle;
 import com.example.backend.service.VehicleTypeService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -16,7 +17,7 @@ public class VehicleControllerTest {
 
     // stubbed vehicle service for filtering
     private static class StubVehicleService extends com.example.backend.service.VehicleService {
-        private List<com.example.backend.dto.VehicleSummaryDto> returnList;
+        private List<Vehicle> returnList;
         private boolean throwOnCall;
 
         StubVehicleService() {
@@ -24,13 +25,13 @@ public class VehicleControllerTest {
             returnList = List.of();
         }
 
-        void setReturnList(List<com.example.backend.dto.VehicleSummaryDto> list) {
+        void setReturnList(List<Vehicle> list) {
             this.returnList = list;
         }
         void setThrowOnCall(boolean val) { this.throwOnCall = val; }
 
         @Override
-        public List<com.example.backend.dto.VehicleSummaryDto> getVehiclesByType(String typeId) {
+        public List<Vehicle> getVehiclesByType(String typeId) {
             if (throwOnCall) throw new IllegalArgumentException("bad");
             return returnList;
         }
@@ -59,7 +60,10 @@ public class VehicleControllerTest {
     @Test
     void getVehiclesFiltersByTypeId() {
         StubVehicleService vs = new StubVehicleService();
-        vs.setReturnList(List.of(new com.example.backend.dto.VehicleSummaryDto("Car1", "thumb1")));
+        Vehicle v = new Vehicle();
+        v.setMake("Test");
+        v.setModel("Car");
+        vs.setReturnList(List.of(v));
         controller = new VehicleController(null, vehicleTypeService, vs);
         var resp = controller.getAllVehicles("someId");
         assertTrue(resp.getStatusCode().is2xxSuccessful());

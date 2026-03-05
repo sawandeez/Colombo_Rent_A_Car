@@ -1,5 +1,6 @@
 package com.example.backend.controller;
 
+import com.example.backend.model.Vehicle;
 import com.example.backend.dto.VehicleTypeDto;
 import com.example.backend.repository.VehicleRepository;
 import com.example.backend.service.VehicleTypeService;
@@ -30,7 +31,7 @@ public class VehicleController {
     public ResponseEntity<?> getAllVehicles(@org.springframework.web.bind.annotation.RequestParam(value = "typeId", required = false) String typeId) {
         try {
             if (typeId != null) {
-                List<com.example.backend.dto.VehicleSummaryDto> filtered = vehicleService.getVehiclesByType(typeId);
+                List<Vehicle> filtered = vehicleService.getVehiclesByType(typeId);
                 return ResponseEntity.ok(filtered);
             }
             return ResponseEntity.ok(vehicleRepository.findAll());
