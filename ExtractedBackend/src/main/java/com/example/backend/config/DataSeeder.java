@@ -21,9 +21,8 @@ public class DataSeeder {
     private final VehicleTypeRepository typeRepo;
     private final VehicleRepository vehicleRepo;
 
-    // Disabled for now - MongoDB may not always be available
-    // Enable this bean when you have MongoDB running
-    // @Bean
+    @Bean
+main
     public CommandLineRunner seedData() {
         return args -> {
             try {
