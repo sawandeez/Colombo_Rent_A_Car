@@ -3,13 +3,12 @@ spring:
     name: extracted-backend
   data:
     mongodb:
-<<<<<<< Updated upstream
       # Read from MONGODB_URI environment variable, with fallback for local development
       # keep quotes around URI to avoid YAML parsing issues
       uri: "${MONGODB_URI:mongodb+srv://sawandmagedaragama_db_user:12126441@cluster0.cd2xx6j.mongodb.net/car-rental-db?retryWrites=true&w=majority&appName=Cluster0}"
-=======
-      uri: "mongodb+srv://sawandmagedaragama_db_user:12126441rentacar@cluster0.cd2xx6j.mongodb.net/car-rental-extracted-db?appName=Cluster0&retryWrites=true&w=majority"
->>>>>>> Stashed changes
+
+      uri: "mongodb+srv://sawandmagedaragama_db_user:12126441rentacar@cluster0.cd2xx6j.mongodb.net/car-rental-db?appName=Cluster0&retryWrites=true&w=majority"
+
       auto-index-creation: true
 
 server:
