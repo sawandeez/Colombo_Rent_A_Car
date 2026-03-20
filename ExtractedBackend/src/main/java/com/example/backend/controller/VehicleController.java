@@ -1,57 +1,67 @@
 package com.example.backend.controller;
 
-import com.example.backend.model.Vehicle;
-import com.example.backend.dto.VehicleTypeDto;
-import com.example.backend.repository.VehicleRepository;
-import com.example.backend.service.VehicleTypeService;
+import com.example.backend.dto.VehicleSummaryDto;
+import com.example.backend.dto.VehicleUpsertRequestDto;
+import jakarta.validation.Valid;
+import com.example.backend.service.VehicleService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RestController
-@RequestMapping("/api")
-@lombok.extern.slf4j.Slf4j
+@RequestMapping("/api/v1/vehicles")
+@RequiredArgsConstructor
 public class VehicleController {
 
-    private final VehicleRepository vehicleRepository;
-    private final VehicleTypeService vehicleTypeService;
-    private final com.example.backend.service.VehicleService vehicleService;
+    private final VehicleService vehicleService;
 
-    public VehicleController(VehicleRepository vehicleRepository, VehicleTypeService vehicleTypeService,
-                             com.example.backend.service.VehicleService vehicleService) {
-        this.vehicleRepository = vehicleRepository;
-        this.vehicleTypeService = vehicleTypeService;
-        this.vehicleService = vehicleService;
+    @GetMapping
+    public ResponseEntity<List<VehicleSummaryDto>> getAllVehicles() {
+        return ResponseEntity.ok(vehicleService.getAllVehicles());
     }
 
-    @GetMapping("/vehicles")
-    public ResponseEntity<?> getAllVehicles(@org.springframework.web.bind.annotation.RequestParam(value = "typeId", required = false) String typeId) {
-        try {
-            if (typeId != null) {
-                List<Vehicle> filtered = vehicleService.getVehiclesByType(typeId);
-                return ResponseEntity.ok(filtered);
-            }
-            return ResponseEntity.ok(vehicleRepository.findAll());
-        } catch (IllegalArgumentException iae) {
-            log.warn("Bad request in getAllVehicles: {}", iae.getMessage());
-            return ResponseEntity.badRequest().body(iae.getMessage());
-        } catch (Exception e) {
-            log.error("Failed to fetch vehicles", e);
-            return ResponseEntity.status(500).build();
-        }
+    @GetMapping("/available")
+    public ResponseEntity<List<VehicleSummaryDto>> getAvailableVehicles() {
+        return ResponseEntity.ok(vehicleService.getAllAvailableVehicles());
     }
 
-    @GetMapping("/vehicle-types")
-    public ResponseEntity<List<VehicleTypeDto>> getAllVehicleTypes() {
-        try {
-            List<VehicleTypeDto> types = vehicleTypeService.getAllTypes();
-            return ResponseEntity.ok(types);
-        } catch (Exception e) {
-            log.error("Failed to fetch vehicle types", e);
-            return ResponseEntity.status(500).build();
-        }
+    @GetMapping("/{id}")
+    public ResponseEntity<VehicleSummaryDto> getVehicle(@PathVariable String id) {
+        return ResponseEntity.ok(vehicleService.getVehicle(id));
+    }
+
+    @GetMapping("/type/{type}")
+    public ResponseEntity<List<VehicleSummaryDto>> getVehiclesByType(@PathVariable String type) {
+        return ResponseEntity.ok(vehicleService.getAvailableVehiclesByType(type));
+    }
+
+    @PostMapping
+    public ResponseEntity<VehicleSummaryDto> createVehicle(@Valid @RequestBody VehicleUpsertRequestDto dto) {
+        return ResponseEntity.ok(vehicleService.createVehicle(dto));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<VehicleSummaryDto> updateVehicle(@PathVariable String id, @Valid @RequestBody VehicleUpsertRequestDto dto) {
+        return ResponseEntity.ok(vehicleService.updateVehicle(id, dto));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteVehicle(@PathVariable String id) {
+        vehicleService.deleteVehicle(id);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{id}/hold")
+    public ResponseEntity<Void> holdVehicle(@PathVariable String id) {
+        vehicleService.setAdminHold(id, true);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{id}/resume")
+    public ResponseEntity<Void> resumeVehicle(@PathVariable String id) {
+        vehicleService.setAdminHold(id, false);
+        return ResponseEntity.ok().build();
     }
 }

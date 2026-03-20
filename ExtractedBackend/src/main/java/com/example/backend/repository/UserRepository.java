@@ -1,6 +1,6 @@
-package com.carrental.system.repository;
+package com.example.backend.repository;
 
-import com.carrental.system.domain.User;
+import com.example.backend.model.User;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import java.util.Optional;
 

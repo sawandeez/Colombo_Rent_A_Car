@@ -1,6 +1,6 @@
-package com.carrental.system.security;
+package com.example.backend.security;
 
-import com.carrental.system.repository.UserRepository;
+import com.example.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
