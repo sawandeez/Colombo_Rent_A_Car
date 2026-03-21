@@ -1,6 +1,6 @@
-package com.carrental.system.dto;
+package com.example.backend.dto;
 
-import com.carrental.system.domain.UserRole;
+import com.example.backend.model.UserRole;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
