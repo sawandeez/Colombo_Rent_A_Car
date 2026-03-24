@@ -6,14 +6,20 @@ import com.example.backend.dto.RegisterRequest;
 import com.example.backend.model.User;
 import com.example.backend.repository.UserRepository;
 import com.example.backend.service.AuthService;
+import com.example.backend.service.BookingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -26,6 +32,7 @@ import java.util.List;
 public class AuthController {
 
     private final AuthService service;
+    private final BookingService bookingService;
     private final UserRepository userRepository;
 
     @PostMapping("/api/v1/auth/register")
@@ -53,6 +60,30 @@ public class AuthController {
         return ResponseEntity.ok(buildAuthenticatedProfileResponse());
     }
 
+    @GetMapping("/api/users/me/documents/nic-front")
+    public ResponseEntity<Resource> getMyNicFront() {
+        BookingService.DocumentContent document = bookingService.loadMyNicFrontDocument();
+        return buildDownloadResponse(document);
+    }
+
+    @GetMapping("/api/users/me/documents/driving-license")
+    public ResponseEntity<Resource> getMyDrivingLicense() {
+        BookingService.DocumentContent document = bookingService.loadMyDrivingLicenseDocument();
+        return buildDownloadResponse(document);
+    }
+
+    @GetMapping("/api/admin/users/{userId}/documents/nic-front")
+    public ResponseEntity<Resource> getUserNicFrontForAdmin(@PathVariable String userId) {
+        BookingService.DocumentContent document = bookingService.loadUserNicFrontDocumentForAdmin(userId);
+        return buildDownloadResponse(document);
+    }
+
+    @GetMapping("/api/admin/users/{userId}/documents/driving-license")
+    public ResponseEntity<Resource> getUserDrivingLicenseForAdmin(@PathVariable String userId) {
+        BookingService.DocumentContent document = bookingService.loadUserDrivingLicenseDocumentForAdmin(userId);
+        return buildDownloadResponse(document);
+    }
+
     private AuthResponse buildAuthenticatedProfileResponse() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) {
@@ -70,5 +101,16 @@ public class AuthController {
                 .roles(List.of("ROLE_" + user.getRole().name()))
                 .tokenType("Bearer")
                 .build();
+    }
+
+    private ResponseEntity<Resource> buildDownloadResponse(BookingService.DocumentContent document) {
+        ContentDisposition contentDisposition = ContentDisposition.attachment()
+                .filename(document.fileName())
+                .build();
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(document.contentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString())
+                .body(document.resource());
     }
 }

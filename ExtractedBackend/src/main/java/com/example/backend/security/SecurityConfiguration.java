@@ -50,6 +50,8 @@ public class SecurityConfiguration {
                         .requestMatchers("/api/health", "/api/db-status").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/auth/me").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/v1/profile").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/users/me/documents/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/admin/users/*/documents/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/vehicles", "/api/v1/vehicles/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/vehicle-types", "/api/v1/vehicle-types/**").permitAll()

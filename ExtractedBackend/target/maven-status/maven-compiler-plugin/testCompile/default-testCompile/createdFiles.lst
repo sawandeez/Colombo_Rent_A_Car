@@ -1,6 +1,7 @@
 com\example\backend\controller\HealthControllerTest.class
 com\example\backend\controller\HealthControllerTest$3.class
 com\example\backend\controller\HealthControllerTest$1.class
+com\example\backend\controller\BookingDocumentIntegrationTest.class
 com\example\backend\service\VehicleServiceTest.class
 com\example\backend\controller\HealthControllerTest$2.class
 com\example\backend\controller\VehicleControllerTest$StubVehicleService.class
