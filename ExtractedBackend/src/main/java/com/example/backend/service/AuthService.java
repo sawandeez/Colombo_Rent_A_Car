@@ -1,13 +1,13 @@
-package com.carrental.system.service;
+package com.example.backend.service;
 
-import com.carrental.system.domain.User;
-import com.carrental.system.domain.UserRole;
-import com.carrental.system.dto.AuthResponse;
-import com.carrental.system.dto.LoginRequest;
-import com.carrental.system.dto.RegisterRequest;
-import com.carrental.system.exception.BusinessRuleException;
-import com.carrental.system.repository.UserRepository;
-import com.carrental.system.security.JwtService;
+import com.example.backend.dto.AuthResponse;
+import com.example.backend.dto.LoginRequest;
+import com.example.backend.dto.RegisterRequest;
+import com.example.backend.exception.BusinessRuleException;
+import com.example.backend.model.User;
+import com.example.backend.model.UserRole;
+import com.example.backend.repository.UserRepository;
+import com.example.backend.security.JwtService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;

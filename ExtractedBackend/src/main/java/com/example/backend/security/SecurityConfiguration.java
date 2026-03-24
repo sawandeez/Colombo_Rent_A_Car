@@ -1,4 +1,4 @@
-package com.carrental.system.security;
+package com.example.backend.security;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -35,6 +35,8 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests(auth -> auth
                         // Allow Swagger
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+                    // Allow health checks
+                    .requestMatchers("/api/health", "/api/db-status").permitAll()
                         // Allow Auth
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         // REST API Permissions

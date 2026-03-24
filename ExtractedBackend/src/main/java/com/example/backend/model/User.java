@@ -1,4 +1,4 @@
-package com.carrental.system.domain;
+package com.example.backend.model;
 
 import lombok.Data;
 import org.springframework.data.annotation.Id;

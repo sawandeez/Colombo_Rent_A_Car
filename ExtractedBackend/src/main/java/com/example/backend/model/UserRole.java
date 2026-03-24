@@ -1,4 +1,4 @@
-package com.carrental.system.domain;
+package com.example.backend.model;
 
 public enum UserRole {
     CUSTOMER,

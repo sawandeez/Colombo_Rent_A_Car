@@ -1,4 +1,4 @@
-package com.carrental.system.security;
+package com.example.backend.security;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;

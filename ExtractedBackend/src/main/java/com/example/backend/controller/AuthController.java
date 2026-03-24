@@ -1,9 +1,9 @@
-package com.carrental.system.controller;
+package com.example.backend.controller;
 
-import com.carrental.system.dto.AuthResponse;
-import com.carrental.system.dto.LoginRequest;
-import com.carrental.system.dto.RegisterRequest;
-import com.carrental.system.service.AuthService;
+import com.example.backend.dto.AuthResponse;
+import com.example.backend.dto.LoginRequest;
+import com.example.backend.dto.RegisterRequest;
+import com.example.backend.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

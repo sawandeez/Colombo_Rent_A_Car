@@ -22,7 +22,6 @@ public class DataSeeder {
     private final VehicleRepository vehicleRepo;
 
     @Bean
-main
     public CommandLineRunner seedData() {
         return args -> {
             try {

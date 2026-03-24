@@ -5,9 +5,7 @@ spring:
     mongodb:
       # Read from MONGODB_URI environment variable, with fallback for local development
       # keep quotes around URI to avoid YAML parsing issues
-      uri: "${MONGODB_URI:mongodb+srv://sawandmagedaragama_db_user:12126441@cluster0.cd2xx6j.mongodb.net/car-rental-db?retryWrites=true&w=majority&appName=Cluster0}"
-
-      uri: "mongodb+srv://sawandmagedaragama_db_user:12126441rentacar@cluster0.cd2xx6j.mongodb.net/car-rental-db?appName=Cluster0&retryWrites=true&w=majority"
+      uri: "${MONGODB_URI:mongodb://localhost:27017/car-rental-db}"
 
       auto-index-creation: true
 
@@ -18,3 +16,9 @@ logging:
   level:
     root: INFO
     com.example.backend: DEBUG
+
+jwt:
+  # Provide via env var JWT_SECRET; must be BASE64 and >= 256-bit for HS256
+  secret: "${JWT_SECRET:ZG9Ob3RVc2VJbkRldg==}"
+  # milliseconds
+  expiration: "${JWT_EXPIRATION:86400000}"
