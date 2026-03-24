@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="207814da-b3a6-44a3-9c84-c7b554e7a61f" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/copilotDiffState.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/copilotDiffState.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/security/SecurityConfiguration.java" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/security/SecurityConfiguration.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ExtractedBackend/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ExtractedBackend/target/maven-status/maven-compiler-plugin/testCompile/default-testCompile/createdFiles.lst" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/target/maven-status/maven-compiler-plugin/testCompile/default-testCompile/createdFiles.lst" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ExtractedBackend/target/surefire-reports/TEST-com.example.backend.controller.HealthControllerTest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/target/surefire-reports/TEST-com.example.backend.controller.HealthControllerTest.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ExtractedBackend/target/surefire-reports/TEST-com.example.backend.controller.VehicleControllerTest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/target/surefire-reports/TEST-com.example.backend.controller.VehicleControllerTest.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ExtractedBackend/target/surefire-reports/TEST-com.example.backend.service.VehicleServiceTest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/target/surefire-reports/TEST-com.example.backend.service.VehicleServiceTest.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ExtractedBackend/target/surefire-reports/com.example.backend.controller.HealthControllerTest.txt" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/target/surefire-reports/com.example.backend.controller.HealthControllerTest.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ExtractedBackend/target/surefire-reports/com.example.backend.controller.VehicleControllerTest.txt" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/target/surefire-reports/com.example.backend.controller.VehicleControllerTest.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ExtractedBackend/target/surefire-reports/com.example.backend.service.VehicleServiceTest.txt" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/target/surefire-reports/com.example.backend.service.VehicleServiceTest.txt" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="CopilotPersistence">
+    <persistenceIdMap>
+      <entry key="_D:/CS_lecture_notes/year2/semester2/SE/assignment/Colombo_Rent_A_Car_BackEnd" value="3BODqEUO8RPwEgeErEisrAUwWbV" />
+    </persistenceIdMap>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 4
+}]]></component>
+  <component name="ProjectId" id="3BODqEUO8RPwEgeErEisrAUwWbV" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "Spring Boot.BackendApplication.executor": "Run",
+    "git-widget-placeholder": "FTW-65-Booking-Schema-and-Repository",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "D:/CS_lecture_notes/year2/semester2/SE/assignment/Colombo_Rent_A_Car_BackEnd"
+  }
+}]]></component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-30f59d01ecdd-2fc7cc6b9a17-intellij.indexing.shared.core-IU-253.31033.145" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="207814da-b3a6-44a3-9c84-c7b554e7a61f" name="Changes" comment="" />
+      <created>1774351411939</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1774351411939</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="github-copilot-workspace">
+    <instructionFileLocations>
+      <option value=".github/instructions" />
+    </instructionFileLocations>
+    <promptFileLocations>
+      <option value=".github/prompts" />
+    </promptFileLocations>
+  </component>
+</project>

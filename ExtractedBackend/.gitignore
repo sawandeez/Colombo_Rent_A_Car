@@ -1,0 +1,13 @@
+# Maven
+/target
+
+# IDE files
+*.iml
+.idea/
+.vscode/
+
+# Logs
+*.log
+
+# Local environment secrets — NEVER commit this file
+.env
