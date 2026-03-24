@@ -4,6 +4,7 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
+<<<<<<< Updated upstream
     <list default="true" id="1e7b9c60-190f-48e4-a461-e3af5e0c3f73" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ExtractedBackend/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/pom.xml" afterDir="false" />
@@ -28,11 +29,15 @@
       <change beforePath="$PROJECT_DIR$/ExtractedBackend/target/surefire-reports/com.example.backend.controller.VehicleControllerTest.txt" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/target/surefire-reports/com.example.backend.controller.VehicleControllerTest.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ExtractedBackend/target/surefire-reports/com.example.backend.service.VehicleServiceTest.txt" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/target/surefire-reports/com.example.backend.service.VehicleServiceTest.txt" afterDir="false" />
     </list>
+=======
+    <list default="true" id="d9dbc77b-aad5-4503-9e93-7b3a6ffff0a2" name="Changes" comment="" />
+>>>>>>> Stashed changes
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
+<<<<<<< Updated upstream
   <component name="CopilotPersistence">
     <persistenceIdMap>
       <entry key="_D:/CS_lecture_notes/year2/semester2/SE/assignment/Colombo_Rent_A_Car_BackEnd" value="3BO2X7H9xLLc5Q1iuOG5uwftAKC" />
@@ -88,4 +93,20 @@
       <option value=".github/prompts" />
     </promptFileLocations>
   </component>
+=======
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="1" id="Add" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "git-widget-placeholder": "FTW-65-Booking-Schema-and-Repository"
+  }
+}]]></component>
+  <component name="TaskManager">
+    <servers />
+  </component>
+>>>>>>> Stashed changes
 </project>
