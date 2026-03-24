@@ -1,79 +1,154 @@
 package com.example.backend.service;
 
 import com.example.backend.dto.BookingRequest;
+import com.example.backend.dto.BookingCreateRequest;
 import com.example.backend.dto.BookingResponse;
 import com.example.backend.dto.VehicleSummaryDto;
 import com.example.backend.mapper.BookingMapper;
 import com.example.backend.model.Booking;
 import com.example.backend.model.BookingStatus;
+import com.example.backend.model.User;
+import com.example.backend.model.UserRole;
 import com.example.backend.model.Vehicle;
 import com.example.backend.model.VehicleAvailabilityStatus;
 import com.example.backend.repository.BookingRepository;
+import com.example.backend.repository.UserRepository;
 import com.example.backend.repository.VehicleRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.MalformedURLException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+
+import static org.springframework.http.HttpStatus.FORBIDDEN;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 @Service
 @RequiredArgsConstructor
 public class BookingService {
 
-    private static final String DEFAULT_USER_ID = "guest-user";
+    private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
+            MediaType.IMAGE_JPEG_VALUE,
+            MediaType.IMAGE_PNG_VALUE
+    );
+    private static final Map<String, String> CONTENT_TYPE_EXTENSION = Map.of(
+            MediaType.IMAGE_JPEG_VALUE, ".jpg",
+            MediaType.IMAGE_PNG_VALUE, ".png"
+    );
 
     private final BookingRepository bookingRepository;
     private final VehicleRepository vehicleRepository;
+    private final UserRepository userRepository;
     private final BookingMapper bookingMapper;
+
+    @Value("${app.upload.base-dir:uploads}")
+    private String uploadBaseDir;
+
+    @Value("${app.upload.max-file-size-bytes:5242880}")
+    private long maxFileSizeBytes;
 
     @Transactional
     public BookingResponse createBooking(BookingRequest request) {
-        if (!request.getStartDate().isBefore(request.getEndDate())) {
-            throw new IllegalArgumentException("Start date must be before end date");
+        BookingCreateRequest mappedRequest = new BookingCreateRequest();
+        mappedRequest.setVehicleId(request.getVehicleId());
+        mappedRequest.setPickupDate(request.getStartDate());
+        mappedRequest.setReturnDate(request.getEndDate());
+        return createBookingWithDocuments(mappedRequest, null, null);
+    }
+
+    @Transactional
+    public BookingResponse createBookingWithDocuments(
+            BookingCreateRequest request,
+            MultipartFile nicFront,
+            MultipartFile drivingLicense) {
+        User user = getAuthenticatedUser();
+
+        validateDateRange(request.getPickupDate(), request.getReturnDate());
+        getBookableVehicle(request.getVehicleId());
+        validateBookingOverlap(request.getVehicleId(), request.getPickupDate(), request.getReturnDate());
+
+        boolean hasNicFront = isPresent(user.getNicFrontPath());
+        boolean hasDrivingLicense = isPresent(user.getDrivingLicensePath());
+
+        if (!hasNicFront && (nicFront == null || nicFront.isEmpty())) {
+            throw new IllegalArgumentException("nicFront is required because no NIC front document is stored for this user");
+        }
+        if (!hasDrivingLicense && (drivingLicense == null || drivingLicense.isEmpty())) {
+            throw new IllegalArgumentException("drivingLicense is required because no driving license document is stored for this user");
         }
 
-        Vehicle vehicle = vehicleRepository.findById(request.getVehicleId())
-                .orElseThrow(() -> new IllegalArgumentException("Vehicle not found: " + request.getVehicleId()));
-
-        if (!vehicle.isAvailable() || vehicle.isUnderMaintenance() || vehicle.isAdminHeld()) {
-            throw new IllegalStateException("Vehicle is not available for booking");
+        if (nicFront != null && !nicFront.isEmpty()) {
+            String previousPath = user.getNicFrontPath();
+            String storedPath = storeUserDocument(user.getId(), nicFront, "nic-front");
+            user.setNicFrontPath(storedPath);
+            deleteIfExists(previousPath);
         }
 
-        List<Booking> overlaps = bookingRepository.findOverlappingBookings(
-                request.getVehicleId(), request.getStartDate(), request.getEndDate());
-        if (!overlaps.isEmpty()) {
-            throw new IllegalStateException("Vehicle is already booked for the requested period");
+        if (drivingLicense != null && !drivingLicense.isEmpty()) {
+            String previousPath = user.getDrivingLicensePath();
+            String storedPath = storeUserDocument(user.getId(), drivingLicense, "driving-license");
+            user.setDrivingLicensePath(storedPath);
+            deleteIfExists(previousPath);
         }
+
+        user.setDocumentsUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
 
         Booking booking = bookingMapper.toEntity(request);
-        booking.setUserId(DEFAULT_USER_ID);
+        booking.setUserId(user.getId());
         booking.setBookingTime(LocalDateTime.now());
         booking.setStatus(BookingStatus.PENDING);
+        booking.setNicFrontPath(user.getNicFrontPath());
+        booking.setDrivingLicensePath(user.getDrivingLicensePath());
 
-        Booking saved = bookingRepository.save(booking);
-        return toFullDto(saved);
+        Booking savedBooking = bookingRepository.save(booking);
+        return toFullDto(savedBooking);
     }
 
     public List<BookingResponse> getMyBookings() {
-        return bookingRepository.findAll().stream()
+        User user = getAuthenticatedUser();
+        return bookingRepository.findByUserId(user.getId()).stream()
                 .map(this::toFullDto)
                 .toList();
     }
 
     public BookingResponse getBooking(String id) {
+        User user = getAuthenticatedUser();
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found: " + id));
+        enforceOwnerOrAdmin(user, booking.getUserId());
         return toFullDto(booking);
     }
 
     @Transactional
     public void cancelBooking(String bookingId) {
+        User user = getAuthenticatedUser();
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new IllegalArgumentException("Booking not found: " + bookingId));
+        enforceOwnerOrAdmin(user, booking.getUserId());
 
         if (booking.getStatus() == BookingStatus.CANCELLED) {
             throw new IllegalStateException("Booking is already cancelled");
@@ -155,6 +230,181 @@ public class BookingService {
 
         booking.setAdvanceAmount(amount);
         bookingRepository.save(booking);
+    }
+
+    public DocumentContent loadMyNicFrontDocument() {
+        User user = getAuthenticatedUser();
+        return loadUserDocument(user, true);
+    }
+
+    public DocumentContent loadMyDrivingLicenseDocument() {
+        User user = getAuthenticatedUser();
+        return loadUserDocument(user, false);
+    }
+
+    public DocumentContent loadUserNicFrontDocumentForAdmin(String userId) {
+        User currentUser = getAuthenticatedUser();
+        if (currentUser.getRole() != UserRole.ADMIN) {
+            throw new ResponseStatusException(FORBIDDEN, "Admin role required");
+        }
+        User targetUser = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "User not found: " + userId));
+        return loadUserDocument(targetUser, true);
+    }
+
+    public DocumentContent loadUserDrivingLicenseDocumentForAdmin(String userId) {
+        User currentUser = getAuthenticatedUser();
+        if (currentUser.getRole() != UserRole.ADMIN) {
+            throw new ResponseStatusException(FORBIDDEN, "Admin role required");
+        }
+        User targetUser = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "User not found: " + userId));
+        return loadUserDocument(targetUser, false);
+    }
+
+    private void validateDateRange(LocalDateTime pickupDate, LocalDateTime returnDate) {
+        if (pickupDate == null || returnDate == null) {
+            throw new IllegalArgumentException("pickupDate and returnDate are required");
+        }
+        if (!returnDate.isAfter(pickupDate)) {
+            throw new IllegalArgumentException("returnDate must be after pickupDate");
+        }
+    }
+
+    private void getBookableVehicle(String vehicleId) {
+        Vehicle vehicle = vehicleRepository.findById(vehicleId)
+                .orElseThrow(() -> new IllegalArgumentException("Vehicle not found: " + vehicleId));
+
+        if (!vehicle.isAvailable() || vehicle.isUnderMaintenance() || vehicle.isAdminHeld()) {
+            throw new IllegalStateException("Vehicle is not available for booking");
+        }
+    }
+
+    private void validateBookingOverlap(String vehicleId, LocalDateTime startDate, LocalDateTime endDate) {
+        List<Booking> overlaps = bookingRepository.findOverlappingBookings(vehicleId, startDate, endDate);
+        if (!overlaps.isEmpty()) {
+            throw new IllegalStateException("Vehicle is already booked for the requested period");
+        }
+    }
+
+    private String storeUserDocument(String userId, MultipartFile file, String filePrefix) {
+        validateFile(file, filePrefix);
+
+        String extension = CONTENT_TYPE_EXTENSION.get(file.getContentType());
+        String generatedName = filePrefix + "-" + UUID.randomUUID() + extension;
+
+        Path userDirectory = resolveUserDirectory(userId);
+        Path targetPath = userDirectory.resolve(generatedName).normalize();
+
+        if (!targetPath.startsWith(userDirectory)) {
+            throw new IllegalArgumentException("Invalid storage path");
+        }
+
+        try {
+            Files.createDirectories(userDirectory);
+            Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException ex) {
+            throw new IllegalStateException("Failed to store " + filePrefix + " file", ex);
+        }
+
+        return "user-docs/" + userId + "/" + generatedName;
+    }
+
+    private Path resolveUserDirectory(String userId) {
+        return Paths.get(uploadBaseDir).toAbsolutePath().normalize()
+                .resolve("user-docs")
+                .resolve(userId)
+                .normalize();
+    }
+
+    private void validateFile(MultipartFile file, String fieldName) {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException(fieldName + " is required");
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_CONTENT_TYPES.contains(contentType)) {
+            throw new IllegalArgumentException(fieldName + " must be image/jpeg or image/png");
+        }
+
+        if (file.getSize() > maxFileSizeBytes) {
+            throw new IllegalArgumentException(fieldName + " exceeds the 5MB size limit");
+        }
+    }
+
+    private void deleteIfExists(String storedPath) {
+        if (!isPresent(storedPath)) {
+            return;
+        }
+        try {
+            Path filePath = resolveStoredPath(storedPath);
+            Files.deleteIfExists(filePath);
+        } catch (IOException ex) {
+            throw new IllegalStateException("Failed to replace existing document", ex);
+        }
+    }
+
+    private DocumentContent loadUserDocument(User user, boolean nicFront) {
+        String storedPath = nicFront ? user.getNicFrontPath() : user.getDrivingLicensePath();
+        if (!isPresent(storedPath)) {
+            throw new ResponseStatusException(NOT_FOUND, "Requested document is not uploaded");
+        }
+
+        Path filePath = resolveStoredPath(storedPath);
+        if (!Files.exists(filePath) || !Files.isReadable(filePath)) {
+            throw new ResponseStatusException(NOT_FOUND, "Stored document file not found");
+        }
+
+        try {
+            Resource resource = new UrlResource(filePath.toUri());
+            if (!resource.exists()) {
+                throw new ResponseStatusException(NOT_FOUND, "Stored document file not found");
+            }
+            String contentType = Files.probeContentType(filePath);
+            if (!isPresent(contentType)) {
+                contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
+            }
+            return new DocumentContent(resource, contentType, filePath.getFileName().toString());
+        } catch (MalformedURLException ex) {
+            throw new ResponseStatusException(NOT_FOUND, "Stored document file not found");
+        } catch (IOException ex) {
+            throw new IllegalStateException("Failed to read stored document", ex);
+        }
+    }
+
+    private Path resolveStoredPath(String storedPath) {
+        Path basePath = Paths.get(uploadBaseDir).toAbsolutePath().normalize();
+        Path resolved = basePath.resolve(storedPath).normalize();
+        if (!resolved.startsWith(basePath)) {
+            throw new IllegalArgumentException("Invalid stored path");
+        }
+        return resolved;
+    }
+
+    private User getAuthenticatedUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated() || authentication instanceof AnonymousAuthenticationToken) {
+            throw new ResponseStatusException(UNAUTHORIZED, "Authentication is required");
+        }
+
+        String email = authentication.getName();
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(UNAUTHORIZED, "Authenticated user not found"));
+    }
+
+    private void enforceOwnerOrAdmin(User currentUser, String ownerId) {
+        boolean isOwner = currentUser.getId() != null && currentUser.getId().equals(ownerId);
+        boolean isAdmin = currentUser.getRole() == UserRole.ADMIN;
+        if (!isOwner && !isAdmin) {
+            throw new ResponseStatusException(FORBIDDEN, "Access denied for this booking");
+        }
+    }
+
+    private boolean isPresent(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    public record DocumentContent(Resource resource, String contentType, String fileName) {
     }
 
     private BookingResponse toFullDto(Booking booking) {

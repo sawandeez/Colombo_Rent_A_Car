@@ -1,4 +1,5 @@
 com\example\backend\dto\BookingRequest.class
+com\example\backend\controller\GlobalExceptionHandler.class
 com\example\backend\mapper\BookingMapperImpl.class
 com\example\backend\repository\VehicleRepository.class
 com\example\backend\config\AppConfig.class
@@ -12,9 +13,11 @@ com\example\backend\controller\AdminBookingController.class
 com\example\backend\dto\VehicleTypeDto.class
 com\example\backend\service\VehicleService.class
 com\example\backend\config\DataSeeder.class
+com\example\backend\dto\BookingCreateRequest.class
 com\example\backend\repository\PlaceholderRepository.class
 com\example\backend\service\AuthService.class
 com\example\backend\model\HealthStatus.class
+com\example\backend\dto\AuthResponse$AuthResponseBuilder.class
 com\example\backend\controller\HealthController.class
 com\example\backend\repository\UserRepository.class
 com\example\backend\model\Vehicle.class
@@ -39,6 +42,6 @@ com\example\backend\service\BookingService.class
 com\example\backend\dto\VehicleUpsertRequestDto.class
 com\example\backend\security\ApplicationConfig.class
 com\example\backend\security\JwtAuthenticationFilter.class
-com\example\backend\config\AppConfig$1.class
 com\example\backend\model\Booking.class
 com\example\backend\security\SecurityConfiguration.class
+com\example\backend\service\BookingService$DocumentContent.class

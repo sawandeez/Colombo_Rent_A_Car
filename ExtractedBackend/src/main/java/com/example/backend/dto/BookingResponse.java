@@ -19,4 +19,6 @@ public class BookingResponse {
     private BigDecimal advanceAmount;
     private boolean advancePaid;
     private String rejectionReason;
+    private String nicFrontPath;
+    private String drivingLicensePath;
 }

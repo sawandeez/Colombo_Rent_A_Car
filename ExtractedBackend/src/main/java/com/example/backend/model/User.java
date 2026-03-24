@@ -5,6 +5,8 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import java.time.LocalDateTime;
+
 @Data
 @Document(collection = "users")
 public class User {
@@ -29,4 +31,9 @@ public class User {
 
     // For document verification status (relevant for Customers)
     private boolean documentsVerified = false;
+
+    private String nicFrontPath;
+    private String drivingLicensePath;
+    private LocalDateTime documentsUpdatedAt;
+    private LocalDateTime documentsVerifiedAt;
 }

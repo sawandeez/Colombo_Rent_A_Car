@@ -26,4 +26,7 @@ public class Booking {
     private boolean advancePaid = false;
 
     private String rejectionReason;
+
+    private String nicFrontPath;
+    private String drivingLicensePath;
 }
