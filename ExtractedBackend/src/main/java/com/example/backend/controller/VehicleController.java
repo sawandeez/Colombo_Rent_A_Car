@@ -5,6 +5,7 @@ import com.example.backend.dto.VehicleUpsertRequestDto;
 import jakarta.validation.Valid;
 import com.example.backend.service.VehicleService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,22 +18,22 @@ public class VehicleController {
 
     private final VehicleService vehicleService;
 
-    @GetMapping
+    @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<VehicleSummaryDto>> getAllVehicles() {
         return ResponseEntity.ok(vehicleService.getAllVehicles());
     }
 
-    @GetMapping("/available")
+    @GetMapping(value = "/available", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<VehicleSummaryDto>> getAvailableVehicles() {
         return ResponseEntity.ok(vehicleService.getAllAvailableVehicles());
     }
 
-    @GetMapping("/{id}")
+    @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<VehicleSummaryDto> getVehicle(@PathVariable String id) {
         return ResponseEntity.ok(vehicleService.getVehicle(id));
     }
 
-    @GetMapping("/type/{type}")
+    @GetMapping(value = "/type/{type}", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<VehicleSummaryDto>> getVehiclesByType(@PathVariable String type) {
         return ResponseEntity.ok(vehicleService.getAvailableVehiclesByType(type));
     }

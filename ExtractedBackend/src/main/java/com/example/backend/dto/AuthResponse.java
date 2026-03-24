@@ -13,6 +13,7 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 public class AuthResponse {
+    private String id;
     private String token;
     private String accessToken;
     @JsonProperty("tokenType")
@@ -21,4 +22,8 @@ public class AuthResponse {
     private String role;
     private List<String> roles;
     private String name;
+    private String phone;
+    private String district;
+    private String city;
+    private boolean documentsVerified;
 }
