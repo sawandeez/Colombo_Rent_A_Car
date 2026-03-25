@@ -1,10 +1,11 @@
 package com.carrental.system.controller;
 
-import com.carrental.system.dto.BookingRequest;
-import com.carrental.system.dto.BookingResponse;
-import com.carrental.system.service.BookingService;
+import com.example.backend.dto.BookingCreateRequest;
+import com.example.backend.dto.BookingResponse;
+import com.example.backend.service.BookingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,10 +18,11 @@ public class BookingController {
 
     private final BookingService bookingService;
 
-    @PostMapping
-    public ResponseEntity<BookingResponse> createBooking(@RequestBody @Valid BookingRequest request) {
+    @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseEntity<BookingResponse> createBooking(@RequestBody @Valid BookingCreateRequest request) {
         return ResponseEntity.ok(bookingService.createBooking(request));
     }
+
 
     @GetMapping("/my")
     public ResponseEntity<List<BookingResponse>> getMyBookings() {

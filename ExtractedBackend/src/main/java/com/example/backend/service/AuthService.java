@@ -17,7 +17,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.lang.reflect.Field;
 import java.util.List;
+import java.util.Locale;
 
 @Service
 @Slf4j
@@ -30,41 +32,48 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
 
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
+        String email = normalizeEmail(request.getEmail());
+        String phone = normalizeText(request.getPhone());
+        String district = normalizeText(request.getDistrict());
+        String city = normalizeText(request.getCity());
+
+        if (userRepository.existsByEmail(email)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "An account with this email already exists");
         }
 
+        if (phone == null || phone.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "phone is required");
+        }
+        if (district == null || district.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "district is required");
+        }
+        if (city == null || city.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "city is required");
+        }
+
         // Business Rule: Registration is restricted to Colombo district residents
-        if (!"Colombo".equalsIgnoreCase(request.getDistrict())) {
+        if (!"Colombo".equalsIgnoreCase(district)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Registration is restricted to Colombo district residents only");
         }
 
         var user = new User();
-        user.setEmail(request.getEmail());
+        user.setEmail(email);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setName(request.getName());
-        user.setPhone(request.getPhone());
-        user.setDistrict(request.getDistrict());
-        user.setCity(request.getCity());
+        user.setName(normalizeText(request.getName()));
+        user.setPhone(phone);
+        user.setDistrict(district);
+        user.setCity(city);
 
         // Security: Public registration always creates CUSTOMER accounts.
         // Admin accounts are seeded directly into the database (see DataLoader).
         user.setRole(UserRole.CUSTOMER);
 
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
         log.info("REGISTER - New customer registered: {}", user.getEmail());
 
-        String jwtToken = jwtService.generateToken(buildUserDetails(user));
-        AuthResponse response = AuthResponse.builder()
-                .token(jwtToken)
-                .accessToken(jwtToken)
-                .tokenType("Bearer")
-                .email(user.getEmail())
-                .name(user.getName())
-                .role(user.getRole().name())
-                .roles(List.of("ROLE_" + user.getRole().name()))
-                .build();
+        String jwtToken = jwtService.generateToken(buildUserDetails(savedUser));
+        AuthResponse response = buildAuthResponse(savedUser, jwtToken);
         log.debug("REGISTER_RESPONSE - email={}, role={}, roles={}", response.getEmail(), response.getRole(), response.getRoles());
         return response;
     }
@@ -73,23 +82,71 @@ public class AuthService {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
 
-        var user = userRepository.findByEmail(request.getEmail())
+        var user = userRepository.findByEmail(normalizeEmail(request.getEmail()))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
 
         log.info("LOGIN - User logged in: {}", user.getEmail());
 
         String jwtToken = jwtService.generateToken(buildUserDetails(user));
-        AuthResponse response = AuthResponse.builder()
+        AuthResponse response = buildAuthResponse(user, jwtToken);
+        log.debug("LOGIN_RESPONSE - email={}, role={}, roles={}", response.getEmail(), response.getRole(), response.getRoles());
+        return response;
+    }
+
+    private AuthResponse buildAuthResponse(User user, String jwtToken) {
+        return AuthResponse.builder()
+                .id(user.getId())
                 .token(jwtToken)
                 .accessToken(jwtToken)
                 .tokenType("Bearer")
                 .email(user.getEmail())
                 .name(user.getName())
+                .phone(resolvePhone(user))
+                .district(resolveDistrict(user))
+                .city(resolveCity(user))
                 .role(user.getRole().name())
                 .roles(List.of("ROLE_" + user.getRole().name()))
+                .documentsVerified(user.isDocumentsVerified())
                 .build();
-        log.debug("LOGIN_RESPONSE - email={}, role={}, roles={}", response.getEmail(), response.getRole(), response.getRoles());
-        return response;
+    }
+
+    private String resolvePhone(User user) {
+        return firstNonBlank(normalizeText(user.getPhone()), normalizeText(readLegacyStringField(user, "phoneNumber")));
+    }
+
+    private String resolveDistrict(User user) {
+        return firstNonBlank(normalizeText(user.getDistrict()), normalizeText(readLegacyStringField(user, "districtName")));
+    }
+
+    private String resolveCity(User user) {
+        return firstNonBlank(normalizeText(user.getCity()), normalizeText(readLegacyStringField(user, "cityName")));
+    }
+
+    private String firstNonBlank(String first, String second) {
+        if (first != null && !first.isBlank()) {
+            return first;
+        }
+        return second;
+    }
+
+    private String readLegacyStringField(User user, String fieldName) {
+        try {
+            Field field = User.class.getDeclaredField(fieldName);
+            field.setAccessible(true);
+            Object value = field.get(user);
+            return value instanceof String str ? str : null;
+        } catch (NoSuchFieldException | IllegalAccessException ignored) {
+            return null;
+        }
+    }
+
+    private String normalizeText(String value) {
+        return value == null ? null : value.trim();
+    }
+
+    private String normalizeEmail(String value) {
+        String normalized = normalizeText(value);
+        return normalized == null ? null : normalized.toLowerCase(Locale.ROOT);
     }
 
     private UserDetails buildUserDetails(User user) {

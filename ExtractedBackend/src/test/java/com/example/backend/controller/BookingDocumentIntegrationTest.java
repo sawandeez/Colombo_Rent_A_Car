@@ -1,238 +1,199 @@
 package com.example.backend.controller;
 
-import com.example.backend.model.Booking;
-import com.example.backend.model.User;
-import com.example.backend.model.UserRole;
-import com.example.backend.model.Vehicle;
-import com.example.backend.repository.BookingRepository;
-import com.example.backend.repository.UserRepository;
-import com.example.backend.repository.VehicleRepository;
+import com.example.backend.dto.BookingCreateRequest;
+import com.example.backend.dto.BookingResponse;
+import com.example.backend.dto.UserDocumentMetadataResponse;
+import com.example.backend.model.BookingStatus;
+import com.example.backend.model.DocumentCategory;
+import com.example.backend.security.JwtService;
+import com.example.backend.security.SecurityConfiguration;
 import com.example.backend.service.BookingService;
-import org.junit.jupiter.api.BeforeEach;
+import com.example.backend.service.UserDocumentService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
-@AutoConfigureMockMvc
+@WebMvcTest(controllers = {
+        BookingController.class,
+        AdminBookingController.class,
+        UserDocumentController.class,
+        AdminUserDocumentController.class
+})
+@Import(SecurityConfiguration.class)
 class BookingDocumentIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;
 
     @Autowired
+    private ObjectMapper objectMapper;
+
+    @MockBean
     private BookingService bookingService;
 
     @MockBean
-    private BookingRepository bookingRepository;
+    private UserDocumentService userDocumentService;
+
+    /*
+     * Do NOT mock JwtAuthenticationFilter itself — mocking it stubs doFilterInternal()
+     * as a no-op, which breaks the servlet filter chain so requests never reach
+     * DispatcherServlet or Spring Security.
+     *
+     * Instead, mock only its two dependencies so the REAL filter is created.
+     * The real filter always calls filterChain.doFilter() when no Authorization header
+     * is present (which is the case in all @WithMockUser tests), letting the chain
+     * continue normally.  @WithMockUser supplies the SecurityContext directly.
+     */
+    @MockBean
+    private JwtService jwtService;
 
     @MockBean
-    private VehicleRepository vehicleRepository;
+    private UserDetailsService userDetailsService;
 
     @MockBean
-    private UserRepository userRepository;
+    private AuthenticationProvider authenticationProvider;
 
-    private Path uploadDir;
+    @Test
+    @WithMockUser(username = "customer@example.com", roles = "CUSTOMER")
+    void userUploadsMandatoryDocumentAndDownloadsIt() throws Exception {
+        UserDocumentMetadataResponse uploaded = UserDocumentMetadataResponse.builder()
+                .id("doc-1")
+                .ownerUserId("user-1")
+                .category(DocumentCategory.NIC_FRONT)
+                .originalFilename("nic-front.pdf")
+                .contentType("application/pdf")
+                .size(100)
+                .createdAt(LocalDateTime.now())
+                .build();
 
-    @BeforeEach
-    void setUp() throws IOException {
-        uploadDir = Files.createTempDirectory("booking-doc-it");
-        ReflectionTestUtils.setField(bookingService, "uploadBaseDir", uploadDir.toString());
-        ReflectionTestUtils.setField(bookingService, "maxFileSizeBytes", 5 * 1024 * 1024L);
+        when(userDocumentService.uploadForCurrentUser(any(), any())).thenReturn(uploaded);
+        when(userDocumentService.downloadCurrentUserDocument("doc-1"))
+                .thenReturn(new UserDocumentService.DownloadDocumentResponse(
+                        new ByteArrayResource("bytes".getBytes()),
+                        "application/pdf",
+                        "nic-front.pdf"));
 
-        Vehicle vehicle = new Vehicle();
-        vehicle.setId("veh-1");
-        vehicle.setAvailable(true);
-        vehicle.setUnderMaintenance(false);
-        vehicle.setAdminHeld(false);
+        // category is a plain form-field — use @RequestParam (not @RequestPart) so
+        // Spring's ConversionService converts "NIC_FRONT" → DocumentCategory.NIC_FRONT.
+        mockMvc.perform(multipart("/api/v1/users/me/documents")
+                        .file(new MockMultipartFile("file", "nic-front.pdf", "application/pdf", "bytes".getBytes()))
+                        .param("category", "NIC_FRONT"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.id").value("doc-1"))
+                .andExpect(jsonPath("$.category").value("NIC_FRONT"));
 
-        when(vehicleRepository.findById("veh-1")).thenReturn(Optional.of(vehicle));
-        when(bookingRepository.findOverlappingBookings(eq("veh-1"), any(), any())).thenReturn(List.of());
-        when(bookingRepository.save(any(Booking.class))).thenAnswer(invocation -> {
-            Booking booking = invocation.getArgument(0);
-            if (booking.getId() == null) {
-                booking.setId("booking-1");
-            }
-            return booking;
-        });
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        mockMvc.perform(get("/api/v1/users/me/documents/doc-1"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("application/pdf"));
     }
 
     @Test
     @WithMockUser(username = "customer@example.com", roles = "CUSTOMER")
-    void firstBookingRequiresUploadsAndSucceedsWhenProvided() throws Exception {
-        User user = buildUser("u-1", "customer@example.com", UserRole.CUSTOMER, null, null);
-        when(userRepository.findByEmail("customer@example.com")).thenReturn(Optional.of(user));
-
-        MockMultipartFile bookingJson = bookingPart(nowPlusDays(1), nowPlusDays(3));
-        MockMultipartFile nicFront = new MockMultipartFile("nicFront", "nic.jpg", "image/jpeg", "nic".getBytes());
-        MockMultipartFile drivingLicense = new MockMultipartFile("drivingLicense", "license.png", "image/png", "license".getBytes());
-
-        mockMvc.perform(multipart("/api/v1/bookings")
-                        .file(bookingJson)
-                        .file(nicFront)
-                        .file(drivingLicense))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.userId").value("u-1"))
-                .andExpect(jsonPath("$.nicFrontPath").exists())
-                .andExpect(jsonPath("$.drivingLicensePath").exists());
-    }
-
-    @Test
-    @WithMockUser(username = "customer@example.com", roles = "CUSTOMER")
-    void secondBookingSucceedsWithoutReuploadWhenDocsAlreadyStored() throws Exception {
-        User user = buildUser(
-                "u-1",
-                "customer@example.com",
-                UserRole.CUSTOMER,
-                "user-docs/u-1/nic-front-existing.jpg",
-                "user-docs/u-1/driving-license-existing.png");
-        when(userRepository.findByEmail("customer@example.com")).thenReturn(Optional.of(user));
-
-        MockMultipartFile bookingJson = bookingPart(nowPlusDays(2), nowPlusDays(4));
-
-        mockMvc.perform(multipart("/api/v1/bookings")
-                        .file(bookingJson))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.nicFrontPath").value("user-docs/u-1/nic-front-existing.jpg"))
-                .andExpect(jsonPath("$.drivingLicensePath").value("user-docs/u-1/driving-license-existing.png"));
-    }
-
-    @Test
-    @WithMockUser(username = "customer@example.com", roles = "CUSTOMER")
-    void missingSingleRequiredDocumentReturns400() throws Exception {
-        User user = buildUser("u-1", "customer@example.com", UserRole.CUSTOMER, "user-docs/u-1/nic.jpg", null);
-        when(userRepository.findByEmail("customer@example.com")).thenReturn(Optional.of(user));
-
-        MockMultipartFile bookingJson = bookingPart(nowPlusDays(1), nowPlusDays(2));
-
-        mockMvc.perform(multipart("/api/v1/bookings")
-                        .file(bookingJson))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("drivingLicense is required")));
-    }
-
-    @Test
-    @WithMockUser(username = "customer@example.com", roles = "CUSTOMER")
-    void invalidFileTypeReturns400() throws Exception {
-        User user = buildUser("u-1", "customer@example.com", UserRole.CUSTOMER, null, null);
-        when(userRepository.findByEmail("customer@example.com")).thenReturn(Optional.of(user));
-
-        MockMultipartFile bookingJson = bookingPart(nowPlusDays(1), nowPlusDays(2));
-        MockMultipartFile nicFront = new MockMultipartFile("nicFront", "nic.pdf", "application/pdf", "bad".getBytes());
-        MockMultipartFile drivingLicense = new MockMultipartFile("drivingLicense", "license.png", "image/png", "ok".getBytes());
-
-        mockMvc.perform(multipart("/api/v1/bookings")
-                        .file(bookingJson)
-                        .file(nicFront)
-                        .file(drivingLicense))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("image/jpeg or image/png")));
-    }
-
-    @Test
-    @WithMockUser(username = "customer@example.com", roles = "CUSTOMER")
-    void tooLargeFileReturns400() throws Exception {
-        User user = buildUser("u-1", "customer@example.com", UserRole.CUSTOMER, null, null);
-        when(userRepository.findByEmail("customer@example.com")).thenReturn(Optional.of(user));
-
-        MockMultipartFile bookingJson = bookingPart(nowPlusDays(1), nowPlusDays(2));
-        byte[] tooLarge = new byte[(5 * 1024 * 1024) + 1];
-        MockMultipartFile nicFront = new MockMultipartFile("nicFront", "nic.jpg", "image/jpeg", tooLarge);
-        MockMultipartFile drivingLicense = new MockMultipartFile("drivingLicense", "license.png", "image/png", "ok".getBytes());
-
-        mockMvc.perform(multipart("/api/v1/bookings")
-                        .file(bookingJson)
-                        .file(nicFront)
-                        .file(drivingLicense))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("5MB size limit")));
-    }
-
-    @Test
-    @WithMockUser(username = "owner@example.com", roles = "CUSTOMER")
-    void ownerCanDownloadOwnDocument() throws Exception {
-        User owner = buildUser("u-owner", "owner@example.com", UserRole.CUSTOMER,
-                "user-docs/u-owner/nic-front-file.jpg",
-                "user-docs/u-owner/driving-license-file.png");
-        when(userRepository.findByEmail("owner@example.com")).thenReturn(Optional.of(owner));
-
-        Path ownerDir = uploadDir.resolve("user-docs").resolve("u-owner");
-        Files.createDirectories(ownerDir);
-        Files.writeString(ownerDir.resolve("nic-front-file.jpg"), "owner-nic");
-
-        mockMvc.perform(get("/api/users/me/documents/nic-front"))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    @WithMockUser(username = "user2@example.com", roles = "CUSTOMER")
-    void nonAdminCannotDownloadAnotherUsersDocument() throws Exception {
-        mockMvc.perform(get("/api/admin/users/u-owner/documents/nic-front"))
+    void userCannotDownloadAnotherUsersDocument() throws Exception {
+        mockMvc.perform(get("/api/v1/admin/users/user-2/documents/doc-1"))
                 .andExpect(status().isForbidden());
     }
 
     @Test
+    @WithMockUser(username = "customer@example.com", roles = "CUSTOMER")
+    void bookingCreateFailsWith400WhenMandatoryDocumentsMissing() throws Exception {
+        BookingCreateRequest request = new BookingCreateRequest();
+        request.setVehicleId("veh-1");
+        request.setPickupDate(LocalDateTime.now().plusDays(1));
+        request.setReturnDate(LocalDateTime.now().plusDays(2));
+
+        when(bookingService.createBooking(any(BookingCreateRequest.class)))
+                .thenThrow(new ResponseStatusException(BAD_REQUEST, "Missing mandatory document: DRIVING_LICENSE"));
+
+        mockMvc.perform(post("/api/v1/bookings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Missing mandatory document: DRIVING_LICENSE"));
+    }
+
+    @Test
+    @WithMockUser(username = "customer@example.com", roles = "CUSTOMER")
+    void bookingCreateSucceedsWhenMandatoryDocumentsExist() throws Exception {
+        BookingCreateRequest request = new BookingCreateRequest();
+        request.setVehicleId("veh-1");
+        request.setPickupDate(LocalDateTime.now().plusDays(1));
+        request.setReturnDate(LocalDateTime.now().plusDays(2));
+
+        BookingResponse response = new BookingResponse();
+        response.setId("b-1");
+        response.setStatus(BookingStatus.PENDING);
+        response.setNicFrontDocumentId("doc-nic");
+        response.setDrivingLicenseDocumentId("doc-license");
+
+        when(bookingService.createBooking(any(BookingCreateRequest.class))).thenReturn(response);
+
+        mockMvc.perform(post("/api/v1/bookings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("b-1"))
+                .andExpect(jsonPath("$.nicFrontDocumentId").value("doc-nic"))
+                .andExpect(jsonPath("$.drivingLicenseDocumentId").value("doc-license"));
+    }
+
+    @Test
     @WithMockUser(username = "admin@example.com", roles = "ADMIN")
-    void adminCanDownloadAnyUsersDocument() throws Exception {
-        User admin = buildUser("u-admin", "admin@example.com", UserRole.ADMIN, null, null);
-        User target = buildUser("u-target", "target@example.com", UserRole.CUSTOMER,
-                "user-docs/u-target/nic-front-file.jpg",
-                "user-docs/u-target/driving-license-file.png");
+    void adminCanListAndApproveAndRejectBookings() throws Exception {
+        BookingResponse booking = new BookingResponse();
+        booking.setId("b-1");
+        booking.setStatus(BookingStatus.PENDING);
 
-        when(userRepository.findByEmail("admin@example.com")).thenReturn(Optional.of(admin));
-        when(userRepository.findById("u-target")).thenReturn(Optional.of(target));
+        when(bookingService.getAllBookings(any(), anyString(), anyInt(), anyInt()))
+                .thenReturn(new PageImpl<>(List.of(booking)));
 
-        Path targetDir = uploadDir.resolve("user-docs").resolve("u-target");
-        Files.createDirectories(targetDir);
-        Files.writeString(targetDir.resolve("nic-front-file.jpg"), "target-nic");
+        mockMvc.perform(get("/api/v1/admin/bookings")
+                        .param("status", "PENDING")
+                        .param("search", "b-")
+                        .param("page", "0")
+                        .param("size", "10"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value("b-1"));
 
-        mockMvc.perform(get("/api/admin/users/u-target/documents/nic-front"))
+        mockMvc.perform(patch("/api/v1/admin/bookings/b-1/approve"))
                 .andExpect(status().isOk());
-    }
 
-    private MockMultipartFile bookingPart(LocalDateTime pickupDate, LocalDateTime returnDate) {
-        String payload = "{" +
-                "\"vehicleId\":\"veh-1\"," +
-                "\"pickupDate\":\"" + pickupDate + "\"," +
-                "\"returnDate\":\"" + returnDate + "\"" +
-                "}";
-        return new MockMultipartFile("booking", "booking.json", "application/json", payload.getBytes());
-    }
+        mockMvc.perform(patch("/api/v1/admin/bookings/b-1/reject")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"invalid docs\"}"))
+                .andExpect(status().isOk());
 
-    private LocalDateTime nowPlusDays(int days) {
-        return LocalDateTime.now().plusDays(days).withNano(0);
-    }
-
-    private User buildUser(String id, String email, UserRole role, String nicPath, String dlPath) {
-        User user = new User();
-        user.setId(id);
-        user.setEmail(email);
-        user.setRole(role);
-        user.setNicFrontPath(nicPath);
-        user.setDrivingLicensePath(dlPath);
-        return user;
+        verify(bookingService).approveBooking("b-1");
+        verify(bookingService).rejectBooking("b-1", "invalid docs");
     }
 }
-

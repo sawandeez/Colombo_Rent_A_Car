@@ -27,6 +27,6 @@ public class Booking {
 
     private String rejectionReason;
 
-    private String nicFrontPath;
-    private String drivingLicensePath;
+    private String nicFrontDocumentId;
+    private String drivingLicenseDocumentId;
 }
