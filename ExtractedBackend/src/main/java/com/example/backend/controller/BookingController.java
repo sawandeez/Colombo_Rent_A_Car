@@ -1,4 +1,4 @@
-package com.example.backend.controller;
+package com.carrental.system.controller;
 
 import com.example.backend.dto.BookingCreateRequest;
 import com.example.backend.dto.BookingResponse;
