@@ -7,6 +7,7 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
+        <module name="system" />
       </profile>
       <profile name="Annotation profile for car-rental-system" enabled="true">
         <sourceOutputDir name="target/generated-sources/annotations" />
@@ -17,7 +18,6 @@
           <entry name="$MAVEN_REPOSITORY$/org/mapstruct/mapstruct-processor/1.6.3/mapstruct-processor-1.6.3.jar" />
         </processorPath>
         <module name="extracted-backend" />
-        <module name="system" />
       </profile>
     </annotationProcessing>
     <bytecodeTargetLevel>
