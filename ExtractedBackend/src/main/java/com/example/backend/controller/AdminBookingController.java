@@ -1,9 +1,10 @@
-package com.example.backend.controller;
+package com.carrental.system.controller;
 
-import com.example.backend.dto.BookingResponse;
-import com.example.backend.service.BookingService;
+import com.carrental.system.dto.BookingResponse;
+import com.carrental.system.service.BookingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -12,6 +13,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/admin/bookings")
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('ADMIN')")
 public class AdminBookingController {
 
     private final BookingService bookingService;
