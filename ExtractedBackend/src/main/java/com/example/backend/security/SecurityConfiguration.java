@@ -1,9 +1,13 @@
 package com.example.backend.security;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -16,33 +20,79 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.io.IOException;
+import java.time.Instant;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity // Enable @PreAuthorize
+@Slf4j
 @RequiredArgsConstructor
 public class SecurityConfiguration {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final AuthenticationProvider authenticationProvider;
+    private final ObjectMapper objectMapper;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(auth -> auth
-                        // Allow Swagger
-                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
-                    // Allow health checks
-                    .requestMatchers("/api/health", "/api/db-status").permitAll()
-                        // Allow Auth
-                        .requestMatchers("/api/v1/auth/**").permitAll()
-                        // REST API Permissions
-                        .requestMatchers(HttpMethod.GET, "/api/v1/vehicles/**").permitAll()
-                        .anyRequest().authenticated())
                 .sessionManagement(sess -> sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        // Allow CORS preflight
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // Allow basic public endpoints
+                        .requestMatchers("/error").permitAll()
+                        .requestMatchers("/api/health", "/api/db-status").permitAll()
+
+                        // Swagger
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+
+                        // Auth: allow register/login/signup without JWT
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/v1/auth/register",
+                                "/api/v1/auth/login",
+                                "/api/v1/auth/signup").permitAll()
+
+                        // Auth/profile: requires JWT
+                        .requestMatchers(HttpMethod.GET, "/api/v1/auth/me", "/api/v1/profile").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/users/me/documents/**").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/admin/users/*/documents/**").hasRole("ADMIN")
+
+                        // Public catalog
+                        .requestMatchers(HttpMethod.GET, "/api/v1/vehicles", "/api/v1/vehicles/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/vehicle-types", "/api/v1/vehicle-types/**").permitAll()
+
+                        // Booking: allow checking booked dates publicly, everything else needs auth
+                        .requestMatchers(HttpMethod.GET, "/api/v1/bookings/vehicle/*/booked-dates").permitAll()
+                        .requestMatchers("/api/v1/bookings/**").authenticated()
+
+                        // Admin booking management
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+
+                        // Vehicle management (admin)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/vehicles", "/api/v1/vehicles/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/v1/vehicles/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/v1/vehicles/**").hasRole("ADMIN")
+
+                        .anyRequest().authenticated())
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            log.debug("SECURITY - 401 Unauthorized for {} {} ({})",
+                                    request.getMethod(), request.getRequestURI(), authException.getMessage());
+                            writeErrorResponse(response, 401, "Unauthorized", "Authentication is required", request.getRequestURI());
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            log.debug("SECURITY - 403 Forbidden for {} {} ({})",
+                                    request.getMethod(), request.getRequestURI(), accessDeniedException.getMessage());
+                            writeErrorResponse(response, 403, "Forbidden", "You do not have permission to access this resource", request.getRequestURI());
+                        }))
                 .authenticationProvider(authenticationProvider)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -54,15 +104,33 @@ public class SecurityConfiguration {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:5173",
-                "http://localhost:5174",
-                "http://localhost:5175")); // Frontend URLs
+                                "http://localhost:5174",
+                                "http://localhost:5175"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
-        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Cache-Control"));
+        configuration.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type", "Cache-Control", "X-Requested-With"));
+        configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
-        configuration.setExposedHeaders(Arrays.asList("Authorization"));
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
+    }
+
+    private void writeErrorResponse(
+            HttpServletResponse response,
+            int status,
+            String error,
+            String message,
+            String path) throws IOException {
+        response.setStatus(status);
+        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("timestamp", Instant.now().toString());
+        body.put("status", status);
+        body.put("error", error);
+        body.put("message", message);
+        body.put("path", path);
+        objectMapper.writeValue(response.getWriter(), body);
     }
 }

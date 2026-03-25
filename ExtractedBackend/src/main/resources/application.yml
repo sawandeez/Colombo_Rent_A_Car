@@ -10,7 +10,7 @@ spring:
       auto-index-creation: true
 
 server:
-  port: 8080
+  port: 8081
 
 logging:
   level:
@@ -19,6 +19,6 @@ logging:
 
 jwt:
   # Provide via env var JWT_SECRET; must be BASE64 and >= 256-bit for HS256
-  secret: "${JWT_SECRET:ZG9Ob3RVc2VJbkRldg==}"
+  secret: "${JWT_SECRET:VGhpc0lzQVNlY3VyZUFuZFN1ZmZpY2llbnRseUxvbmdCYXNlNjRLZXlGb3JKV1RTaWduaW5nMTIzNDU2Nzg5MA==}"
   # milliseconds
   expiration: "${JWT_EXPIRATION:86400000}"

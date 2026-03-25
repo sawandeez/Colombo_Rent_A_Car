@@ -3,19 +3,24 @@ package com.example.backend.service;
 import com.example.backend.dto.AuthResponse;
 import com.example.backend.dto.LoginRequest;
 import com.example.backend.dto.RegisterRequest;
-import com.example.backend.exception.BusinessRuleException;
 import com.example.backend.model.User;
 import com.example.backend.model.UserRole;
 import com.example.backend.repository.UserRepository;
 import com.example.backend.security.JwtService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.util.List;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class AuthService {
 
@@ -23,16 +28,16 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
-    private final AuditService auditService;
 
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new BusinessRuleException("An account with this email already exists");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "An account with this email already exists");
         }
 
         // Business Rule: Registration is restricted to Colombo district residents
         if (!"Colombo".equalsIgnoreCase(request.getDistrict())) {
-            throw new BusinessRuleException("Registration is restricted to Colombo district residents only");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Registration is restricted to Colombo district residents only");
         }
 
         var user = new User();
@@ -48,10 +53,20 @@ public class AuthService {
         user.setRole(UserRole.CUSTOMER);
 
         userRepository.save(user);
-        auditService.logAction("REGISTER", user.getEmail(), "New customer registered");
+        log.info("REGISTER - New customer registered: {}", user.getEmail());
 
         String jwtToken = jwtService.generateToken(buildUserDetails(user));
-        return new AuthResponse(jwtToken, user.getRole().name());
+        AuthResponse response = AuthResponse.builder()
+                .token(jwtToken)
+                .accessToken(jwtToken)
+                .tokenType("Bearer")
+                .email(user.getEmail())
+                .name(user.getName())
+                .role(user.getRole().name())
+                .roles(List.of("ROLE_" + user.getRole().name()))
+                .build();
+        log.debug("REGISTER_RESPONSE - email={}, role={}, roles={}", response.getEmail(), response.getRole(), response.getRoles());
+        return response;
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -59,18 +74,24 @@ public class AuthService {
                 new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
 
         var user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new BusinessRuleException("Invalid credentials"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
 
-        auditService.logAction("LOGIN", user.getEmail(), "User logged in");
+        log.info("LOGIN - User logged in: {}", user.getEmail());
 
         String jwtToken = jwtService.generateToken(buildUserDetails(user));
-        return new AuthResponse(jwtToken, user.getRole().name());
+        AuthResponse response = AuthResponse.builder()
+                .token(jwtToken)
+                .accessToken(jwtToken)
+                .tokenType("Bearer")
+                .email(user.getEmail())
+                .name(user.getName())
+                .role(user.getRole().name())
+                .roles(List.of("ROLE_" + user.getRole().name()))
+                .build();
+        log.debug("LOGIN_RESPONSE - email={}, role={}, roles={}", response.getEmail(), response.getRole(), response.getRoles());
+        return response;
     }
 
-    /**
-     * Builds a Spring Security UserDetails from a User domain object.
-     * Centralised here to avoid duplication across register/login.
-     */
     private UserDetails buildUserDetails(User user) {
         return org.springframework.security.core.userdetails.User.builder()
                 .username(user.getEmail())

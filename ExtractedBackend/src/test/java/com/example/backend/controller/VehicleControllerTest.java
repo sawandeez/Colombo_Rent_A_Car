@@ -1,8 +1,7 @@
 package com.example.backend.controller;
 
-import com.example.backend.dto.VehicleTypeDto;
-import com.example.backend.model.Vehicle;
-import com.example.backend.service.VehicleTypeService;
+import com.example.backend.dto.VehicleSummaryDto;
+import com.example.backend.service.VehicleService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -12,12 +11,11 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public class VehicleControllerTest {
 
-    private VehicleTypeService vehicleTypeService;
     private VehicleController controller;
+    private VehicleService vehicleService;
 
-    // stubbed vehicle service for filtering
-    private static class StubVehicleService extends com.example.backend.service.VehicleService {
-        private List<Vehicle> returnList;
+    private static class StubVehicleService extends VehicleService {
+        private List<VehicleSummaryDto> returnList;
         private boolean throwOnCall;
 
         StubVehicleService() {
@@ -25,13 +23,16 @@ public class VehicleControllerTest {
             returnList = List.of();
         }
 
-        void setReturnList(List<Vehicle> list) {
+        void setReturnList(List<VehicleSummaryDto> list) {
             this.returnList = list;
         }
-        void setThrowOnCall(boolean val) { this.throwOnCall = val; }
+
+        void setThrowOnCall(boolean val) {
+            this.throwOnCall = val;
+        }
 
         @Override
-        public List<Vehicle> getVehiclesByType(String typeId) {
+        public List<VehicleSummaryDto> getAllVehicles() {
             if (throwOnCall) throw new IllegalArgumentException("bad");
             return returnList;
         }
@@ -39,58 +40,26 @@ public class VehicleControllerTest {
 
     @BeforeEach
     void setup() {
-        vehicleTypeService = new VehicleTypeService(null) {
-            @Override
-            public List<VehicleTypeDto> getAllTypes() {
-                return List.of(new VehicleTypeDto("1", "SUV"));
-            }
-        };
-        // default controller without vehicle filter service (tests below will reassign)
-        controller = new VehicleController(null, vehicleTypeService, null);
+        vehicleService = new StubVehicleService();
+        controller = new VehicleController(vehicleService);
     }
 
     @Test
-    void getAllVehicleTypesReturnsList() {
-        var response = controller.getAllVehicleTypes();
+    void getAllVehiclesReturnsList() {
+        StubVehicleService vs = (StubVehicleService) vehicleService;
+        vs.setReturnList(List.of(new VehicleSummaryDto("Car1", "thumb1")));
+
+        var response = controller.getAllVehicles();
         assertTrue(response.getStatusCode().is2xxSuccessful());
         assertEquals(1, response.getBody().size());
-        assertEquals("SUV", response.getBody().get(0).getName());
+        assertEquals("Car1", response.getBody().get(0).getName());
     }
 
     @Test
-    void getVehiclesFiltersByTypeId() {
-        StubVehicleService vs = new StubVehicleService();
-        Vehicle v = new Vehicle();
-        v.setMake("Test");
-        v.setModel("Car");
-        vs.setReturnList(List.of(v));
-        controller = new VehicleController(null, vehicleTypeService, vs);
-        var resp = controller.getAllVehicles("someId");
-        assertTrue(resp.getStatusCode().is2xxSuccessful());
-        assertNotNull(resp.getBody());
-    }
-
-    @Test
-    void getVehiclesHandlesInvalidType() {
-        StubVehicleService vs = new StubVehicleService();
+    void getAllVehiclesHandlesException() {
+        StubVehicleService vs = (StubVehicleService) vehicleService;
         vs.setThrowOnCall(true);
-        controller = new VehicleController(null, vehicleTypeService, vs);
-        var resp = controller.getAllVehicles("bad");
-        assertEquals(400, resp.getStatusCode().value());
-        assertTrue(resp.getBody().toString().contains("bad"));
-    }
 
-    @Test
-    void getAllVehicleTypesHandlesException() {
-        vehicleTypeService = new VehicleTypeService(null) {
-            @Override
-            public List<VehicleTypeDto> getAllTypes() {
-                throw new RuntimeException("db error");
-            }
-        };
-        StubVehicleService vs = new StubVehicleService();
-        controller = new VehicleController(null, vehicleTypeService, vs);
-        var response = controller.getAllVehicleTypes();
-        assertEquals(500, response.getStatusCode().value());
+        assertThrows(IllegalArgumentException.class, () -> controller.getAllVehicles());
     }
 }
