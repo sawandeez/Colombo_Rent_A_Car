@@ -1,5 +1,6 @@
 package com.example.backend.service;
 
+import com.example.backend.dto.AdminUserResponse;
 import com.example.backend.dto.BookingCreateRequest;
 import com.example.backend.dto.BookingResponse;
 import com.example.backend.dto.VehicleSummaryDto;
@@ -26,8 +27,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -42,6 +50,8 @@ import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 @RequiredArgsConstructor
 public class BookingService {
 
+    private static final ZoneId COLOMBO_ZONE = ZoneId.of("Asia/Colombo");
+
     private final BookingRepository bookingRepository;
     private final VehicleRepository vehicleRepository;
     private final UserRepository userRepository;
@@ -51,12 +61,20 @@ public class BookingService {
     public BookingResponse createBooking(BookingCreateRequest request) {
         User user = getAuthenticatedUser();
 
-        validateDateRange(request.getStartDate(), request.getEndDate());
-        LocalDateTime bookingStart = toStartOfDay(request.getStartDate());
-        LocalDateTime bookingEnd = toEndOfDay(request.getEndDate());
+        ResolvedBookingWindow resolvedWindow = resolveRequestedWindow(request);
+
+        validateDateRange(
+                resolvedWindow.startDateTime(),
+                resolvedWindow.endDateTime(),
+                request.getStartDate(),
+                request.getEndDate());
 
         getBookableVehicle(request.getVehicleId());
-        validateBookingOverlap(request.getVehicleId(), bookingStart, bookingEnd);
+        validateBookingOverlap(
+                request.getVehicleId(),
+                resolvedWindow.startDateTime(),
+                resolvedWindow.endDateTime(),
+                request.getStartDate());
 
         String nicFrontDocumentId = userDocumentService
                 .requireMandatoryDocument(user.getId(), DocumentCategory.NIC_FRONT)
@@ -67,8 +85,8 @@ public class BookingService {
 
         Booking booking = new Booking();
         booking.setVehicleId(request.getVehicleId());
-        booking.setStartDate(bookingStart);
-        booking.setEndDate(bookingEnd);
+        booking.setStartDate(resolvedWindow.startDateTime());
+        booking.setEndDate(resolvedWindow.endDateTime());
         booking.setUserId(user.getId());
         booking.setBookingTime(LocalDateTime.now());
         booking.setStatus(BookingStatus.PENDING);
@@ -127,10 +145,12 @@ public class BookingService {
         return bookedDates;
     }
 
-    public Page<BookingResponse> getAllBookings(BookingStatus status, String search, int page, int size) {
+    public Page<BookingResponse> getAllBookings(BookingStatus status, String search, String fromDate, String toDate, int page, int size) {
         if (page < 0 || size <= 0) {
             throw new ResponseStatusException(BAD_REQUEST, "page must be >= 0 and size must be > 0");
         }
+
+        DateFilter dateFilter = resolveDateFilter(fromDate, toDate);
 
         List<Booking> source = status == null
                 ? bookingRepository.findAll()
@@ -138,6 +158,7 @@ public class BookingService {
 
         List<Booking> filtered = source.stream()
                 .filter(booking -> matchesSearch(booking, search))
+                .filter(booking -> matchesDateFilter(booking, dateFilter))
                 .sorted(Comparator.comparing(Booking::getBookingTime, Comparator.nullsLast(Comparator.reverseOrder())))
                 .toList();
 
@@ -185,35 +206,27 @@ public class BookingService {
         bookingRepository.save(booking);
     }
 
-    private void validateDateRange(LocalDate startDate, LocalDate endDate) {
+    private void validateDateRange(LocalDateTime startDate, LocalDateTime endDate, String rawStartDate, String rawEndDate) {
         if (startDate == null || endDate == null) {
             throw new ResponseStatusException(BAD_REQUEST, "startDate and endDate are required");
         }
 
-        LocalDate today = LocalDate.now();
-        if (startDate.isBefore(today)) {
+        LocalDate today = LocalDate.now(COLOMBO_ZONE);
+        if (startDate.toLocalDate().isBefore(today)) {
             throw new RequestValidationException(
                     "Validation failed",
-                    new ApiFieldError("startDate", startDate, "startDate must not be in the past"));
+                    new ApiFieldError("startDate", rawStartDate, "startDate must not be in the past"));
         }
-        if (endDate.isBefore(today)) {
+        if (endDate.toLocalDate().isBefore(today)) {
             throw new RequestValidationException(
                     "Validation failed",
-                    new ApiFieldError("endDate", endDate, "endDate must not be in the past"));
+                    new ApiFieldError("endDate", rawEndDate, "endDate must not be in the past"));
         }
-        if (!endDate.isAfter(startDate)) {
+        if (endDate.isBefore(startDate)) {
             throw new RequestValidationException(
                     "Validation failed",
-                    new ApiFieldError("endDate", endDate, "endDate must be after startDate"));
+                    new ApiFieldError("endDate", rawEndDate, "endDate must be on or after startDate"));
         }
-    }
-
-    private LocalDateTime toStartOfDay(LocalDate date) {
-        return date.atStartOfDay();
-    }
-
-    private LocalDateTime toEndOfDay(LocalDate date) {
-        return date.plusDays(1).atStartOfDay();
     }
 
     private void getBookableVehicle(String vehicleId) {
@@ -225,12 +238,12 @@ public class BookingService {
         }
     }
 
-    private void validateBookingOverlap(String vehicleId, LocalDateTime startDate, LocalDateTime endDate) {
+    private void validateBookingOverlap(String vehicleId, LocalDateTime startDate, LocalDateTime endDate, String rejectedValue) {
         List<Booking> overlaps = bookingRepository.findOverlappingBookings(vehicleId, startDate, endDate);
         if (!overlaps.isEmpty()) {
             throw new RequestValidationException(
                     "Validation failed",
-                    new ApiFieldError("startDate", startDate.toLocalDate(), "Vehicle is already booked for the requested period"));
+                    new ApiFieldError("startDate", rejectedValue, "Vehicle is already booked for the requested period"));
         }
     }
 
@@ -269,6 +282,128 @@ public class BookingService {
         return text != null && text.toLowerCase(Locale.ROOT).contains(q);
     }
 
+    private DateFilter resolveDateFilter(String fromDate, String toDate) {
+        LocalDate from = parseFlexibleDateParam("fromDate", fromDate);
+        LocalDate to = parseFlexibleDateParam("toDate", toDate);
+
+        if (from != null && to != null && to.isBefore(from)) {
+            throw new RequestValidationException(
+                    "Validation failed",
+                    new ApiFieldError("toDate", toDate, "toDate must be on or after fromDate"));
+        }
+
+        return new DateFilter(from, to);
+    }
+
+    private boolean matchesDateFilter(Booking booking, DateFilter dateFilter) {
+        if (dateFilter.from() == null && dateFilter.to() == null) {
+            return true;
+        }
+
+        LocalDate bookingStart = booking.getStartDate().toLocalDate();
+        LocalDate bookingEnd = toInclusiveBookingEndDate(booking.getEndDate());
+
+        if (dateFilter.from() != null && bookingEnd.isBefore(dateFilter.from())) {
+            return false;
+        }
+        return dateFilter.to() == null || !bookingStart.isAfter(dateFilter.to());
+    }
+
+    private LocalDate parseFlexibleDateParam(String fieldName, String rawValue) {
+        String value = normalizeText(rawValue);
+        if (value == null) {
+            return null;
+        }
+
+        try {
+            return LocalDate.parse(value);
+        } catch (DateTimeParseException ignored) {
+        }
+        try {
+            return LocalDateTime.parse(value).toLocalDate();
+        } catch (DateTimeParseException ignored) {
+        }
+        try {
+            return OffsetDateTime.parse(value).atZoneSameInstant(COLOMBO_ZONE).toLocalDate();
+        } catch (DateTimeParseException ignored) {
+        }
+        try {
+            return Instant.parse(value).atZone(COLOMBO_ZONE).toLocalDate();
+        } catch (DateTimeParseException ignored) {
+        }
+
+        throw new RequestValidationException(
+                "Validation failed",
+                new ApiFieldError(fieldName, rawValue, "Invalid date format. Use yyyy-MM-dd or ISO-8601 datetime."));
+    }
+
+    private ResolvedBookingWindow resolveRequestedWindow(BookingCreateRequest request) {
+        List<ApiFieldError> errors = new ArrayList<>();
+
+        if (normalizeText(request.getStartDate()) == null) {
+            errors.add(new ApiFieldError("startDate", request.getStartDate(), "startDate is required"));
+        }
+        if (normalizeText(request.getEndDate()) == null) {
+            errors.add(new ApiFieldError("endDate", request.getEndDate(), "endDate is required"));
+        }
+
+        TemporalInput startInput = parseFlexibleTemporal("startDate", request.getStartDate(), errors);
+        TemporalInput endInput = parseFlexibleTemporal("endDate", request.getEndDate(), errors);
+        TemporalInput pickupInput = parseFlexibleTemporal("pickupDateTime", request.getPickupDateTime(), errors);
+        TemporalInput returnInput = parseFlexibleTemporal("returnDateTime", request.getReturnDateTime(), errors);
+
+        if (!errors.isEmpty()) {
+            throw new RequestValidationException("Validation failed", errors);
+        }
+
+        LocalDateTime start = startInput != null && startInput.isDateOnly() && pickupInput != null
+                ? pickupInput.dateTime()
+                : startInput == null ? null : startInput.dateTime();
+
+        LocalDateTime end = endInput != null && endInput.isDateOnly() && returnInput != null && !returnInput.dateTime().toLocalTime().equals(LocalTime.MIDNIGHT)
+                ? returnInput.dateTime()
+                : endInput == null ? null : endInput.dateTime();
+
+        return new ResolvedBookingWindow(start, end);
+    }
+
+    private TemporalInput parseFlexibleTemporal(String fieldName, String rawValue, List<ApiFieldError> errors) {
+        String value = normalizeText(rawValue);
+        if (value == null) {
+            return null;
+        }
+
+        try {
+            LocalDate date = LocalDate.parse(value);
+            boolean endField = "endDate".equals(fieldName);
+            return new TemporalInput(endField ? date.plusDays(1).atStartOfDay() : date.atStartOfDay(), true);
+        } catch (DateTimeParseException ignored) {
+        }
+        try {
+            return new TemporalInput(LocalDateTime.parse(value), false);
+        } catch (DateTimeParseException ignored) {
+        }
+        try {
+            return new TemporalInput(OffsetDateTime.parse(value).atZoneSameInstant(COLOMBO_ZONE).toLocalDateTime(), false);
+        } catch (DateTimeParseException ignored) {
+        }
+        try {
+            return new TemporalInput(Instant.parse(value).atZone(COLOMBO_ZONE).toLocalDateTime(), false);
+        } catch (DateTimeParseException ignored) {
+        }
+
+        errors.add(new ApiFieldError(fieldName, rawValue, "Invalid date format. Use yyyy-MM-dd or ISO-8601 datetime."));
+        return null;
+    }
+
+    private String normalizeText(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
     private BookingResponse toFullDto(Booking booking) {
         BookingResponse response = new BookingResponse();
         response.setId(booking.getId());
@@ -283,9 +418,47 @@ public class BookingService {
         response.setRejectionReason(booking.getRejectionReason());
         response.setNicFrontDocumentId(booking.getNicFrontDocumentId());
         response.setDrivingLicenseDocumentId(booking.getDrivingLicenseDocumentId());
+
+        userRepository.findById(booking.getUserId())
+                .ifPresent(user -> response.setUser(AdminUserResponse.builder()
+                        .id(user.getId())
+                        .name(user.getName())
+                        .email(user.getEmail())
+                        .username(user.getEmail())
+                        .build()));
+
         vehicleRepository.findById(booking.getVehicleId())
-                .ifPresent(vehicle -> response.setVehicle(toVehicleSummaryDto(vehicle)));
+                .ifPresent(vehicle -> {
+                    VehicleSummaryDto vehicleDto = toVehicleSummaryDto(vehicle);
+                    response.setVehicle(vehicleDto);
+                    response.setVehicleName(vehicleDto.getName());
+                    response.setTotalPrice(calculateTotalPrice(booking, vehicleDto));
+                });
+
+        if (response.getTotalPrice() == null) {
+            response.setTotalPrice(booking.getAdvanceAmount());
+        }
+
         return response;
+    }
+
+    private BigDecimal calculateTotalPrice(Booking booking, VehicleSummaryDto vehicle) {
+        BigDecimal ratePerDay = vehicle.getRentalPricePerDay() != null
+                ? vehicle.getRentalPricePerDay()
+                : vehicle.getRentalPrice();
+        if (ratePerDay == null || booking.getStartDate() == null || booking.getEndDate() == null) {
+            return booking.getAdvanceAmount();
+        }
+
+        long durationMinutes = Math.max(0L, Duration.between(booking.getStartDate(), booking.getEndDate()).toMinutes());
+        long chargeableDays = Math.max(1L, (long) Math.ceil(durationMinutes / (24d * 60d)));
+        return ratePerDay.multiply(BigDecimal.valueOf(chargeableDays));
+    }
+
+    private LocalDate toInclusiveBookingEndDate(LocalDateTime bookingEnd) {
+        return bookingEnd.toLocalTime().equals(LocalTime.MIDNIGHT)
+                ? bookingEnd.toLocalDate().minusDays(1)
+                : bookingEnd.toLocalDate();
     }
 
     private VehicleSummaryDto toVehicleSummaryDto(Vehicle vehicle) {
@@ -311,5 +484,14 @@ public class BookingService {
         dto.setUnderMaintenance(vehicle.isUnderMaintenance());
         dto.setAdminHeld(vehicle.isAdminHeld());
         return dto;
+    }
+
+    private record TemporalInput(LocalDateTime dateTime, boolean isDateOnly) {
+    }
+
+    private record ResolvedBookingWindow(LocalDateTime startDateTime, LocalDateTime endDateTime) {
+    }
+
+    private record DateFilter(LocalDate from, LocalDate to) {
     }
 }

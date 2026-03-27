@@ -22,6 +22,10 @@ public class User {
 
     private String phone;
 
+    private Integer age;
+
+    private String address;
+
     // Core requirement: Location restriction (Colombo)
     private String district;
 

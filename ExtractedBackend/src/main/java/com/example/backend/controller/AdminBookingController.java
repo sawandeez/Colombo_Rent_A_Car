@@ -22,9 +22,11 @@ public class AdminBookingController {
     public ResponseEntity<Page<BookingResponse>> getAllBookings(
             @RequestParam(required = false) BookingStatus status,
             @RequestParam(required = false) String search,
+            @RequestParam(required = false) String fromDate,
+            @RequestParam(required = false) String toDate,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(bookingService.getAllBookings(status, search, page, size));
+        return ResponseEntity.ok(bookingService.getAllBookings(status, search, fromDate, toDate, page, size));
     }
 
     @PatchMapping("/{id}/approve")
@@ -34,8 +36,8 @@ public class AdminBookingController {
     }
 
     @PatchMapping("/{id}/reject")
-    public ResponseEntity<Void> rejectBooking(@PathVariable String id, @RequestBody @Valid BookingRejectRequest request) {
-        bookingService.rejectBooking(id, request.getReason());
+    public ResponseEntity<Void> rejectBooking(@PathVariable String id, @RequestBody(required = false) @Valid BookingRejectRequest request) {
+        bookingService.rejectBooking(id, request == null ? "Rejected by admin" : request.getReason());
         return ResponseEntity.ok().build();
     }
 }

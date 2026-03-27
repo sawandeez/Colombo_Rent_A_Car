@@ -49,12 +49,12 @@ public class GlobalExceptionHandler {
         if (root instanceof InvalidFormatException invalidFormatException) {
             String field = invalidFormatException.getPath().isEmpty()
                     ? "request"
-                    : invalidFormatException.getPath().get(0).getFieldName();
+                    : invalidFormatException.getPath().getFirst().getFieldName();
             Object rejectedValue = invalidFormatException.getValue();
             List<ApiFieldError> validationErrors = List.of(new ApiFieldError(
                     field,
                     rejectedValue,
-                    "Invalid value. Use ISO date format yyyy-MM-dd for date fields."));
+                    "Invalid value. Use yyyy-MM-dd or ISO-8601 datetime."));
             return buildError(HttpStatus.BAD_REQUEST, "Validation failed", request, validationErrors);
         }
         return buildError(HttpStatus.BAD_REQUEST, "Malformed JSON request", request, null);
@@ -119,6 +119,11 @@ public class GlobalExceptionHandler {
         body.put("path", request.getRequestURI());
         if (validationErrors != null && !validationErrors.isEmpty()) {
             body.put("errors", validationErrors);
+            Map<String, String> validationErrorsMap = new LinkedHashMap<>();
+            for (ApiFieldError error : validationErrors) {
+                validationErrorsMap.putIfAbsent(error.field(), error.message());
+            }
+            body.put("validationErrors", validationErrorsMap);
         }
         return ResponseEntity.status(status).body(body);
     }

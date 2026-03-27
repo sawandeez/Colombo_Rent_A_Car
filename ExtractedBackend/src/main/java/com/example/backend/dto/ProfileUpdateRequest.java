@@ -26,5 +26,14 @@ public class ProfileUpdateRequest {
     @NotBlank(message = "city is required")
     @JsonAlias({"cityName"})
     private String city;
+
+    private String address;
+
+    public void setAddress(String address) {
+        this.address = address;
+        if ((this.city == null || this.city.isBlank()) && address != null && !address.isBlank()) {
+            this.city = address.trim();
+        }
+    }
 }
 

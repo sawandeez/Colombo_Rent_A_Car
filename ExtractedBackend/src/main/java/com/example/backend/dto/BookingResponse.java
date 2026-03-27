@@ -10,15 +10,38 @@ import java.time.LocalDateTime;
 public class BookingResponse {
     private String id;
     private String userId;
+    private AdminUserResponse user;
     private String vehicleId;
     private VehicleSummaryDto vehicle;
+    private String vehicleName;
     private LocalDateTime bookingTime;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
     private BookingStatus status;
     private BigDecimal advanceAmount;
+    private BigDecimal totalPrice;
     private boolean advancePaid;
     private String rejectionReason;
     private String nicFrontDocumentId;
     private String drivingLicenseDocumentId;
+
+    public String getBookingId() {
+        return id;
+    }
+
+    public LocalDateTime getPickupDateTime() {
+        return startDate;
+    }
+
+    public LocalDateTime getReturnDateTime() {
+        return endDate;
+    }
+
+    public LocalDateTime getCreatedAt() {
+        return bookingTime;
+    }
+
+    public BigDecimal getTotalAmount() {
+        return totalPrice;
+    }
 }

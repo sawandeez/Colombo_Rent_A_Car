@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Locale;
 
@@ -79,14 +80,48 @@ public class AuthController {
                 .id(user.getId())
                 .email(user.getEmail())
                 .name(user.getName())
-                .phone(user.getPhone())
-                .district(user.getDistrict())
-                .city(user.getCity())
+                .phone(resolvePhone(user))
+                .district(resolveDistrict(user))
+                .city(resolveCity(user))
                 .role(user.getRole().name())
                 .roles(List.of("ROLE_" + user.getRole().name()))
                 .documentsVerified(user.isDocumentsVerified())
                 .tokenType("Bearer")
                 .build();
+    }
+
+    private String resolvePhone(User user) {
+        return firstNonBlank(normalizeText(user.getPhone()), normalizeText(readLegacyStringField(user, "phoneNumber")));
+    }
+
+    private String resolveDistrict(User user) {
+        return firstNonBlank(normalizeText(user.getDistrict()), normalizeText(readLegacyStringField(user, "districtName")));
+    }
+
+    private String resolveCity(User user) {
+        return firstNonBlank(normalizeText(user.getCity()), normalizeText(readLegacyStringField(user, "cityName")));
+    }
+
+    private String firstNonBlank(String first, String second) {
+        if (first != null && !first.isBlank()) {
+            return first;
+        }
+        return second;
+    }
+
+    private String readLegacyStringField(User user, String fieldName) {
+        try {
+            Field field = User.class.getDeclaredField(fieldName);
+            field.setAccessible(true);
+            Object value = field.get(user);
+            return value instanceof String str ? str : null;
+        } catch (NoSuchFieldException | IllegalAccessException ignored) {
+            return null;
+        }
+    }
+
+    private String normalizeText(String value) {
+        return value == null ? null : value.trim();
     }
 
 }
