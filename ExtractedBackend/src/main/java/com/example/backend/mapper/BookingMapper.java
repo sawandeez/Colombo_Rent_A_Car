@@ -21,7 +21,7 @@ public interface BookingMapper {
     @Mapping(target = "rejectionReason", ignore = true)
     @Mapping(target = "nicFrontDocumentId", ignore = true)
     @Mapping(target = "drivingLicenseDocumentId", ignore = true)
-    @Mapping(target = "startDate", source = "pickupDate")
-    @Mapping(target = "endDate", source = "returnDate")
+    @Mapping(target = "startDate", ignore = true)
+    @Mapping(target = "endDate", ignore = true)
     Booking toEntity(BookingCreateRequest request);
 }

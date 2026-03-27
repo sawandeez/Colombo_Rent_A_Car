@@ -3,6 +3,8 @@ package com.example.backend.service;
 import com.example.backend.dto.BookingCreateRequest;
 import com.example.backend.dto.BookingResponse;
 import com.example.backend.dto.VehicleSummaryDto;
+import com.example.backend.exception.ApiFieldError;
+import com.example.backend.exception.RequestValidationException;
 import com.example.backend.model.Booking;
 import com.example.backend.model.BookingStatus;
 import com.example.backend.model.DocumentCategory;
@@ -49,9 +51,12 @@ public class BookingService {
     public BookingResponse createBooking(BookingCreateRequest request) {
         User user = getAuthenticatedUser();
 
-        validateDateRange(request.getPickupDate(), request.getReturnDate());
+        validateDateRange(request.getStartDate(), request.getEndDate());
+        LocalDateTime bookingStart = toStartOfDay(request.getStartDate());
+        LocalDateTime bookingEnd = toEndOfDay(request.getEndDate());
+
         getBookableVehicle(request.getVehicleId());
-        validateBookingOverlap(request.getVehicleId(), request.getPickupDate(), request.getReturnDate());
+        validateBookingOverlap(request.getVehicleId(), bookingStart, bookingEnd);
 
         String nicFrontDocumentId = userDocumentService
                 .requireMandatoryDocument(user.getId(), DocumentCategory.NIC_FRONT)
@@ -62,8 +67,8 @@ public class BookingService {
 
         Booking booking = new Booking();
         booking.setVehicleId(request.getVehicleId());
-        booking.setStartDate(request.getPickupDate());
-        booking.setEndDate(request.getReturnDate());
+        booking.setStartDate(bookingStart);
+        booking.setEndDate(bookingEnd);
         booking.setUserId(user.getId());
         booking.setBookingTime(LocalDateTime.now());
         booking.setStatus(BookingStatus.PENDING);
@@ -112,7 +117,9 @@ public class BookingService {
 
         for (Booking booking : activeBookings) {
             LocalDate start = booking.getStartDate().toLocalDate();
-            LocalDate end = booking.getEndDate().toLocalDate();
+            LocalDate end = booking.getEndDate().toLocalTime().equals(java.time.LocalTime.MIDNIGHT)
+                    ? booking.getEndDate().toLocalDate().minusDays(1)
+                    : booking.getEndDate().toLocalDate();
             for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
                 bookedDates.add(date.toString());
             }
@@ -178,16 +185,35 @@ public class BookingService {
         bookingRepository.save(booking);
     }
 
-    private void validateDateRange(LocalDateTime pickupDate, LocalDateTime returnDate) {
-        if (pickupDate == null || returnDate == null) {
-            throw new ResponseStatusException(BAD_REQUEST, "pickupDate and returnDate are required");
+    private void validateDateRange(LocalDate startDate, LocalDate endDate) {
+        if (startDate == null || endDate == null) {
+            throw new ResponseStatusException(BAD_REQUEST, "startDate and endDate are required");
         }
-        if (!pickupDate.isAfter(LocalDateTime.now()) || !returnDate.isAfter(LocalDateTime.now())) {
-            throw new ResponseStatusException(BAD_REQUEST, "pickupDate and returnDate must be in the future");
+
+        LocalDate today = LocalDate.now();
+        if (startDate.isBefore(today)) {
+            throw new RequestValidationException(
+                    "Validation failed",
+                    new ApiFieldError("startDate", startDate, "startDate must not be in the past"));
         }
-        if (!returnDate.isAfter(pickupDate)) {
-            throw new ResponseStatusException(BAD_REQUEST, "returnDate must be after pickupDate");
+        if (endDate.isBefore(today)) {
+            throw new RequestValidationException(
+                    "Validation failed",
+                    new ApiFieldError("endDate", endDate, "endDate must not be in the past"));
         }
+        if (!endDate.isAfter(startDate)) {
+            throw new RequestValidationException(
+                    "Validation failed",
+                    new ApiFieldError("endDate", endDate, "endDate must be after startDate"));
+        }
+    }
+
+    private LocalDateTime toStartOfDay(LocalDate date) {
+        return date.atStartOfDay();
+    }
+
+    private LocalDateTime toEndOfDay(LocalDate date) {
+        return date.plusDays(1).atStartOfDay();
     }
 
     private void getBookableVehicle(String vehicleId) {
@@ -202,7 +228,9 @@ public class BookingService {
     private void validateBookingOverlap(String vehicleId, LocalDateTime startDate, LocalDateTime endDate) {
         List<Booking> overlaps = bookingRepository.findOverlappingBookings(vehicleId, startDate, endDate);
         if (!overlaps.isEmpty()) {
-            throw new ResponseStatusException(BAD_REQUEST, "Vehicle is already booked for the requested period");
+            throw new RequestValidationException(
+                    "Validation failed",
+                    new ApiFieldError("startDate", startDate.toLocalDate(), "Vehicle is already booked for the requested period"));
         }
     }
 

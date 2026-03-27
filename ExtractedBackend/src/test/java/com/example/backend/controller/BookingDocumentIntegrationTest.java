@@ -3,6 +3,8 @@ package com.example.backend.controller;
 import com.example.backend.dto.BookingCreateRequest;
 import com.example.backend.dto.BookingResponse;
 import com.example.backend.dto.UserDocumentMetadataResponse;
+import com.example.backend.exception.ApiFieldError;
+import com.example.backend.exception.RequestValidationException;
 import com.example.backend.model.BookingStatus;
 import com.example.backend.model.DocumentCategory;
 import com.example.backend.security.JwtService;
@@ -25,9 +27,11 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -129,8 +133,8 @@ class BookingDocumentIntegrationTest {
     void bookingCreateFailsWith400WhenMandatoryDocumentsMissing() throws Exception {
         BookingCreateRequest request = new BookingCreateRequest();
         request.setVehicleId("veh-1");
-        request.setPickupDate(LocalDateTime.now().plusDays(1));
-        request.setReturnDate(LocalDateTime.now().plusDays(2));
+        request.setStartDate(LocalDate.now().plusDays(1));
+        request.setEndDate(LocalDate.now().plusDays(2));
 
         when(bookingService.createBooking(any(BookingCreateRequest.class)))
                 .thenThrow(new ResponseStatusException(BAD_REQUEST, "Missing mandatory document: DRIVING_LICENSE"));
@@ -147,8 +151,10 @@ class BookingDocumentIntegrationTest {
     void bookingCreateSucceedsWhenMandatoryDocumentsExist() throws Exception {
         BookingCreateRequest request = new BookingCreateRequest();
         request.setVehicleId("veh-1");
-        request.setPickupDate(LocalDateTime.now().plusDays(1));
-        request.setReturnDate(LocalDateTime.now().plusDays(2));
+        request.setStartDate(LocalDate.now().plusDays(1));
+        request.setEndDate(LocalDate.now().plusDays(2));
+        request.setPickupDateTime(LocalDateTime.now().plusDays(1).toString());
+        request.setReturnDateTime(LocalDateTime.now().plusDays(2).toString());
 
         BookingResponse response = new BookingResponse();
         response.setId("b-1");
@@ -165,6 +171,80 @@ class BookingDocumentIntegrationTest {
                 .andExpect(jsonPath("$.id").value("b-1"))
                 .andExpect(jsonPath("$.nicFrontDocumentId").value("doc-nic"))
                 .andExpect(jsonPath("$.drivingLicenseDocumentId").value("doc-license"));
+    }
+
+    @Test
+    @WithMockUser(username = "customer@example.com", roles = "CUSTOMER")
+    void bookingCreateFailsWith400WhenDateFormatIsInvalid() throws Exception {
+        String payload = """
+                {
+                  "vehicleId": "veh-1",
+                  "startDate": "2026/04/01",
+                  "endDate": "2026-04-02"
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/bookings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(payload))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.errors[0].field").value("startDate"));
+    }
+
+    @Test
+    @WithMockUser(username = "customer@example.com", roles = "CUSTOMER")
+    void bookingCreateFailsWhenEndDateIsBeforeStartDate() throws Exception {
+        BookingCreateRequest request = new BookingCreateRequest();
+        request.setVehicleId("veh-1");
+        request.setStartDate(LocalDate.now().plusDays(4));
+        request.setEndDate(LocalDate.now().plusDays(2));
+
+        when(bookingService.createBooking(any(BookingCreateRequest.class)))
+                .thenThrow(new RequestValidationException(
+                        "Validation failed",
+                        new ApiFieldError("endDate", request.getEndDate(), "endDate must be after startDate")));
+
+        mockMvc.perform(post("/api/v1/bookings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("endDate"))
+                .andExpect(jsonPath("$.errors[0].message").value("endDate must be after startDate"));
+    }
+
+    @Test
+    @WithMockUser(username = "customer@example.com", roles = "CUSTOMER")
+    void bookingCreateFailsWhenOverlappingBookingExists() throws Exception {
+        BookingCreateRequest request = new BookingCreateRequest();
+        request.setVehicleId("veh-1");
+        request.setStartDate(LocalDate.now().plusDays(1));
+        request.setEndDate(LocalDate.now().plusDays(3));
+
+        when(bookingService.createBooking(any(BookingCreateRequest.class)))
+                .thenThrow(new RequestValidationException(
+                        "Validation failed",
+                        new ApiFieldError("startDate", request.getStartDate(), "Vehicle is already booked for the requested period")));
+
+        mockMvc.perform(post("/api/v1/bookings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errors[0].field").value("startDate"))
+                .andExpect(jsonPath("$.errors[0].message").value("Vehicle is already booked for the requested period"));
+    }
+
+    @Test
+    @WithMockUser(username = "customer@example.com", roles = "CUSTOMER")
+    void bookingCreateFailsWhenRequiredFieldsMissing() throws Exception {
+        mockMvc.perform(post("/api/v1/bookings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Validation failed"))
+                .andExpect(jsonPath("$.errors[?(@.field=='vehicleId')].message").value(hasItem("Vehicle ID is required")))
+                .andExpect(jsonPath("$.errors[?(@.field=='startDate')].message").value(hasItem("startDate is required")))
+                .andExpect(jsonPath("$.errors[?(@.field=='endDate')].message").value(hasItem("endDate is required")));
     }
 
     @Test
