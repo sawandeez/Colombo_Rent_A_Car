@@ -35,7 +35,8 @@ public class AuthService {
         String email = normalizeEmail(request.getEmail());
         String phone = normalizeText(request.getPhone());
         String district = normalizeText(request.getDistrict());
-        String city = normalizeText(request.getCity());
+        ResolvedLocation resolvedLocation = resolveLocation(request.getAddress(), request.getCity());
+        String city = resolvedLocation.city();
 
         if (userRepository.existsByEmail(email)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "An account with this email already exists");
@@ -62,6 +63,8 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setName(normalizeText(request.getName()));
         user.setPhone(phone);
+        user.setAge(request.getAge());
+        user.setAddress(resolvedLocation.address());
         user.setDistrict(district);
         user.setCity(city);
 
@@ -147,6 +150,33 @@ public class AuthService {
     private String normalizeEmail(String value) {
         String normalized = normalizeText(value);
         return normalized == null ? null : normalized.toLowerCase(Locale.ROOT);
+    }
+
+    private ResolvedLocation resolveLocation(String rawAddress, String rawCity) {
+        String address = normalizeText(rawAddress);
+        String city = normalizeText(rawCity);
+
+        if (city != null && city.contains(",")) {
+            String[] parts = city.split(",", 2);
+            String parsedAddress = normalizeText(parts[0]);
+            String parsedCity = normalizeText(parts[1]);
+
+            if ((address == null || address.isBlank()) && parsedAddress != null && !parsedAddress.isBlank()) {
+                address = parsedAddress;
+            }
+            if (parsedCity != null && !parsedCity.isBlank()) {
+                city = parsedCity;
+            }
+        }
+
+        if ((city == null || city.isBlank()) && address != null && !address.isBlank()) {
+            city = address;
+        }
+
+        return new ResolvedLocation(address, city);
+    }
+
+    private record ResolvedLocation(String address, String city) {
     }
 
     private UserDetails buildUserDetails(User user) {

@@ -18,13 +18,26 @@ public class RegisterRequest {
     @NotBlank
     @JsonAlias({"phoneNumber"})
     private String phone;
+
+    private Integer age;
+
     @NotBlank
     @JsonAlias({"districtName"})
     private String district; // Must be validated for "Colombo" in business logic or custom validator
+
     @NotBlank
     @JsonAlias({"cityName"})
     private String city;
 
+    private String address;
+
     // Optional: role can be set here or default to CUSTOMER in service
     private UserRole role;
+
+    public void setAddress(String address) {
+        this.address = address;
+        if ((this.city == null || this.city.isBlank()) && address != null && !address.isBlank()) {
+            this.city = address.trim();
+        }
+    }
 }

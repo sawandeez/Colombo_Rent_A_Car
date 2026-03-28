@@ -26,6 +26,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -89,11 +90,18 @@ class AuthProfilePersistenceServiceTest {
         registerRequest.setEmail("Customer1@Example.com");
         registerRequest.setPassword("Password@123");
         registerRequest.setPhone("0771234567");
+        registerRequest.setAge(29);
         registerRequest.setDistrict("Colombo");
-        registerRequest.setCity("Maharagama");
+        registerRequest.setCity("123 Main Street, Maharagama");
 
         AuthResponse registerResponse = authService.register(registerRequest);
         assertNotNull(registerResponse.getId());
+
+        User storedUser = usersByEmail.get("customer1@example.com");
+        assertNotNull(storedUser);
+        assertEquals(29, storedUser.getAge());
+        assertEquals("123 Main Street", storedUser.getAddress());
+        assertEquals("Maharagama", storedUser.getCity());
 
         LoginRequest loginRequest = new LoginRequest();
         loginRequest.setEmail("customer1@example.com");
@@ -121,6 +129,28 @@ class AuthProfilePersistenceServiceTest {
     }
 
     @Test
+    void registerWithExplicitAddressAndCityPersistsBothSafely() {
+        RegisterRequest registerRequest = new RegisterRequest();
+        registerRequest.setName("Customer Address");
+        registerRequest.setEmail("customer.address@example.com");
+        registerRequest.setPassword("Password@123");
+        registerRequest.setPhone("+94771234567");
+        registerRequest.setAge(31);
+        registerRequest.setDistrict("Colombo");
+        registerRequest.setCity("Nugegoda");
+        registerRequest.setAddress("42 Lake Road");
+
+        AuthResponse response = authService.register(registerRequest);
+
+        assertNotNull(response.getId());
+        User storedUser = usersByEmail.get("customer.address@example.com");
+        assertNotNull(storedUser);
+        assertEquals(31, storedUser.getAge());
+        assertEquals("42 Lake Road", storedUser.getAddress());
+        assertEquals("Nugegoda", storedUser.getCity());
+    }
+
+    @Test
     void updateProfileThenReloginStillReturnsUpdatedPhoneDistrictCity() {
         RegisterRequest registerRequest = new RegisterRequest();
         registerRequest.setName("Customer Two");
@@ -141,10 +171,12 @@ class AuthProfilePersistenceServiceTest {
         updateRequest.setPhone("0711111111");
         updateRequest.setDistrict("Colombo");
         updateRequest.setCity("Nugegoda");
+        updateRequest.setAddress("17 Temple Road");
 
         ProfileResponse updatedProfile = profileService.updateCurrentUserProfile(updateRequest);
         assertEquals("0711111111", updatedProfile.getPhone());
         assertEquals("Nugegoda", updatedProfile.getCity());
+        assertEquals("17 Temple Road", usersByEmail.get("customer2.updated@example.com").getAddress());
 
         SecurityContextHolder.clearContext(); // logout simulation
 

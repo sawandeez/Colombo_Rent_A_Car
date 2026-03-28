@@ -5,35 +5,24 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3fa4dd01-0982-492a-87a1-950246cd267b" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/copilotDiffState.xml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ExtractedBackend/BOOKING_API_CONTRACT.md" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/BOOKING_API_CONTRACT.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/controller/AdminBookingController.java" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/controller/AdminBookingController.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/controller/AuthController.java" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/controller/AuthController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/controller/BookingController.java" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/controller/BookingController.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/controller/GlobalExceptionHandler.java" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/controller/GlobalExceptionHandler.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/controller/VehicleController.java" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/controller/VehicleController.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/dto/AuthResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/dto/AuthResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/dto/BookingCreateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/dto/BookingCreateRequest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/dto/BookingRejectRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/dto/BookingRejectRequest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/dto/BookingResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/dto/BookingResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/dto/ProfileUpdateRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/dto/ProfileUpdateRequest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/dto/RegisterRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/dto/RegisterRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/mapper/BookingMapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/mapper/BookingMapper.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/model/Booking.java" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/model/Booking.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/security/SecurityConfiguration.java" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/security/SecurityConfiguration.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/model/User.java" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/model/User.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/service/AuthService.java" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/service/AuthService.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/service/BookingService.java" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/service/BookingService.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ExtractedBackend/src/main/resources/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/src/main/resources/application.properties" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/service/ProfileService.java" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/src/main/java/com/example/backend/service/ProfileService.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ExtractedBackend/src/test/java/com/example/backend/controller/AuthControllerProfileWebMvcTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/src/test/java/com/example/backend/controller/AuthControllerProfileWebMvcTest.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/ExtractedBackend/src/test/java/com/example/backend/controller/BookingDocumentIntegrationTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/src/test/java/com/example/backend/controller/BookingDocumentIntegrationTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ExtractedBackend/src/test/java/com/example/backend/security/SecurityConfigurationStartupTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/src/test/java/com/example/backend/security/SecurityConfigurationStartupTest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ExtractedBackend/target/classes/application.properties" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/target/classes/application.properties" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ExtractedBackend/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/target/maven-status/maven-compiler-plugin/compile/default-compile/createdFiles.lst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ExtractedBackend/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/target/maven-status/maven-compiler-plugin/compile/default-compile/inputFiles.lst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ExtractedBackend/target/maven-status/maven-compiler-plugin/testCompile/default-testCompile/createdFiles.lst" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/target/maven-status/maven-compiler-plugin/testCompile/default-testCompile/createdFiles.lst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ExtractedBackend/target/maven-status/maven-compiler-plugin/testCompile/default-testCompile/inputFiles.lst" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/target/maven-status/maven-compiler-plugin/testCompile/default-testCompile/inputFiles.lst" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ExtractedBackend/target/surefire-reports/TEST-com.example.backend.controller.HealthControllerTest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/target/surefire-reports/TEST-com.example.backend.controller.HealthControllerTest.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ExtractedBackend/target/surefire-reports/TEST-com.example.backend.controller.VehicleControllerTest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/target/surefire-reports/TEST-com.example.backend.controller.VehicleControllerTest.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ExtractedBackend/target/surefire-reports/TEST-com.example.backend.service.VehicleServiceTest.xml" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/target/surefire-reports/TEST-com.example.backend.service.VehicleServiceTest.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ExtractedBackend/target/surefire-reports/com.example.backend.controller.HealthControllerTest.txt" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/target/surefire-reports/com.example.backend.controller.HealthControllerTest.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ExtractedBackend/target/surefire-reports/com.example.backend.controller.VehicleControllerTest.txt" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/target/surefire-reports/com.example.backend.controller.VehicleControllerTest.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ExtractedBackend/target/surefire-reports/com.example.backend.service.VehicleServiceTest.txt" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/target/surefire-reports/com.example.backend.service.VehicleServiceTest.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ExtractedBackend/src/test/java/com/example/backend/service/AuthProfilePersistenceServiceTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/src/test/java/com/example/backend/service/AuthProfilePersistenceServiceTest.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ExtractedBackend/src/test/java/com/example/backend/service/ProfileServiceTest.java" beforeDir="false" afterPath="$PROJECT_DIR$/ExtractedBackend/src/test/java/com/example/backend/service/ProfileServiceTest.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -48,9 +37,9 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 5
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 5
+}</component>
   <component name="ProjectId" id="3BOfBUioeP7BY4rMXbXwatoDtMv" />
   <component name="ProjectLevelVcsManager">
     <ConfirmationsSetting value="1" id="Add" />
@@ -67,7 +56,7 @@
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.git.unshallow": "true",
     "Spring Boot.BackendApplication.executor": "Run",
-    "git-widget-placeholder": "FTW-64-Booking-Request-API",
+    "git-widget-placeholder": "SPRINT02__BUG__ERROR__FIX",
     "kotlin-language-version-configured": "true"
   }
 }]]></component>

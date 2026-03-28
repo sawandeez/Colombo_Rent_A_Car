@@ -41,7 +41,8 @@ public class ProfileService {
 
         String phone = normalizeText(request.getPhone());
         String district = normalizeText(request.getDistrict());
-        String city = normalizeText(request.getCity());
+        ResolvedLocation resolvedLocation = resolveLocation(request.getAddress(), request.getCity());
+        String city = resolvedLocation.city();
 
         if (phone == null || phone.isBlank()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "phone is required");
@@ -62,6 +63,7 @@ public class ProfileService {
         currentUser.setName(normalizeText(request.getName()));
         currentUser.setEmail(requestedEmail);
         currentUser.setPhone(phone);
+        currentUser.setAddress(resolvedLocation.address());
         currentUser.setDistrict(district);
         currentUser.setCity(city);
 
@@ -135,6 +137,33 @@ public class ProfileService {
             return null;
         }
         return value.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private ResolvedLocation resolveLocation(String rawAddress, String rawCity) {
+        String address = normalizeText(rawAddress);
+        String city = normalizeText(rawCity);
+
+        if (city != null && city.contains(",")) {
+            String[] parts = city.split(",", 2);
+            String parsedAddress = normalizeText(parts[0]);
+            String parsedCity = normalizeText(parts[1]);
+
+            if ((address == null || address.isBlank()) && parsedAddress != null && !parsedAddress.isBlank()) {
+                address = parsedAddress;
+            }
+            if (parsedCity != null && !parsedCity.isBlank()) {
+                city = parsedCity;
+            }
+        }
+
+        if ((city == null || city.isBlank()) && address != null && !address.isBlank()) {
+            city = address;
+        }
+
+        return new ResolvedLocation(address, city);
+    }
+
+    private record ResolvedLocation(String address, String city) {
     }
 }
 

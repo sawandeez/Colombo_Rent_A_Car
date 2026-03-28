@@ -67,6 +67,7 @@ class ProfileServiceTest {
         request.setPhone("0771234567");
         request.setDistrict("Colombo");
         request.setCity("Nugegoda");
+        request.setAddress("14 Temple Road");
 
         ProfileResponse response = profileService.updateCurrentUserProfile(request);
 
@@ -77,6 +78,7 @@ class ProfileServiceTest {
         assertEquals("Updated Name", savedUser.getName());
         assertEquals("updated@example.com", savedUser.getEmail());
         assertEquals("0771234567", savedUser.getPhone());
+        assertEquals("14 Temple Road", savedUser.getAddress());
         assertEquals("Colombo", savedUser.getDistrict());
         assertEquals("Nugegoda", savedUser.getCity());
 

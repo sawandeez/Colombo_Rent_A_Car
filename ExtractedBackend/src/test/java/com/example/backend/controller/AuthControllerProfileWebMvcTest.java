@@ -1,5 +1,6 @@
 package com.example.backend.controller;
 
+import com.example.backend.dto.AuthResponse;
 import com.example.backend.dto.ProfileResponse;
 import com.example.backend.dto.ProfileUpdateRequest;
 import com.example.backend.security.JwtService;
@@ -26,6 +27,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -58,6 +60,42 @@ class AuthControllerProfileWebMvcTest {
 
     @MockBean
     private AuthenticationProvider authenticationProvider;
+
+    @Test
+    void registerAcceptsFrontendCompatibilityPayload() throws Exception {
+        AuthResponse response = AuthResponse.builder()
+                .id("user-1")
+                .token("jwt-token")
+                .accessToken("jwt-token")
+                .email("customer@example.com")
+                .name("Customer One")
+                .phone("+94771234567")
+                .district("Colombo")
+                .city("Nugegoda")
+                .role("CUSTOMER")
+                .documentsVerified(false)
+                .build();
+
+        when(authService.register(any())).thenReturn(response);
+
+        mockMvc.perform(post("/api/v1/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name": "Customer One",
+                                  "email": "customer@example.com",
+                                  "password": "Password@123",
+                                  "phone": "+94771234567",
+                                  "age": 28,
+                                  "district": "Colombo",
+                                  "city": "No. 10 Main Street, Nugegoda",
+                                  "address": "No. 10 Main Street"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").value("jwt-token"))
+                .andExpect(jsonPath("$.role").value("CUSTOMER"));
+    }
 
     @Test
     @WithMockUser(username = "current@example.com", roles = "CUSTOMER")
@@ -148,7 +186,8 @@ class AuthControllerProfileWebMvcTest {
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Validation failed"))
-                .andExpect(jsonPath("$.validationErrors.email").exists());
+                .andExpect(jsonPath("$.validationErrors.email").exists())
+                .andExpect(jsonPath("$.errors").isArray());
     }
 
     @Test
