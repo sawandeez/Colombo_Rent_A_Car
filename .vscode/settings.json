@@ -3,5 +3,6 @@
   "java.configuration.updateBuildConfiguration": "automatic",
 
   // Ensure Maven import is enabled for the Java language server
-  "java.import.maven.enabled": true
+  "java.import.maven.enabled": true,
+  "java.compile.nullAnalysis.mode": "automatic"
 }

@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Service
@@ -42,17 +42,15 @@ public class VehicleService {
     public List<VehicleSummaryDto> getVehiclesByType(String typeId) {
         logger.debug("Fetching vehicles for typeId={}", typeId);
 
-        if (typeId == null || typeId.isBlank()) {
-            throw new IllegalArgumentException("typeId must be provided");
-        }
+        String requiredTypeId = requireNonBlank(typeId, "typeId");
 
-        boolean exists = vehicleTypeRepository.existsById(typeId);
+        boolean exists = vehicleTypeRepository.existsById(Objects.requireNonNull(requiredTypeId, "typeId"));
         if (!exists) {
-            logger.warn("Requested vehicle type does not exist: {}", typeId);
+            logger.warn("Requested vehicle type does not exist: {}", requiredTypeId);
             throw new IllegalArgumentException("Invalid vehicle type id");
         }
 
-        List<Vehicle> list = vehicleRepository.findByVehicleTypeId(typeId);
+        List<Vehicle> list = vehicleRepository.findByVehicleTypeId(Objects.requireNonNull(requiredTypeId, "typeId"));
         return list.stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
@@ -83,11 +81,10 @@ public class VehicleService {
 
     public VehicleSummaryDto getVehicle(String id) {
         logger.debug("Fetching vehicle with id={}", id);
-        Optional<Vehicle> vehicle = vehicleRepository.findById(id);
-        if (vehicle.isEmpty()) {
-            throw new IllegalArgumentException("Vehicle not found with id: " + id);
-        }
-        return convertToDto(vehicle.get());
+        String requiredId = requireNonBlank(id, "id");
+        Vehicle vehicle = vehicleRepository.findById(Objects.requireNonNull(requiredId, "id"))
+                .orElseThrow(() -> new IllegalArgumentException("Vehicle not found with id: " + requiredId));
+        return convertToDto(vehicle);
     }
 
     public VehicleSummaryDto createVehicle(VehicleUpsertRequestDto dto) {
@@ -98,42 +95,47 @@ public class VehicleService {
         Vehicle vehicle = new Vehicle();
         applyUpsertToVehicle(vehicle, dto, true);
 
-        Vehicle saved = vehicleRepository.save(vehicle);
+        Vehicle saved = Objects.requireNonNull(
+            vehicleRepository.save(Objects.requireNonNull(vehicle, "vehicle")),
+            "saved vehicle"
+        );
         return convertToDto(saved);
     }
 
     public VehicleSummaryDto updateVehicle(String id, VehicleUpsertRequestDto dto) {
         logger.debug("Updating vehicle with id={}", id);
-        Optional<Vehicle> existing = vehicleRepository.findById(id);
-        if (existing.isEmpty()) {
-            throw new IllegalArgumentException("Vehicle not found with id: " + id);
-        }
-
-        Vehicle vehicle = existing.get();
+        String requiredId = requireNonBlank(id, "id");
+        Vehicle vehicle = vehicleRepository.findById(Objects.requireNonNull(requiredId, "id"))
+                .orElseThrow(() -> new IllegalArgumentException("Vehicle not found with id: " + requiredId));
         applyUpsertToVehicle(vehicle, dto, false);
 
-        Vehicle updated = vehicleRepository.save(vehicle);
-        return convertToDto(updated);
+        vehicleRepository.save(Objects.requireNonNull(vehicle, "vehicle"));
+        return convertToDto(vehicle);
     }
 
     public void deleteVehicle(String id) {
         logger.debug("Deleting vehicle with id={}", id);
-        if (!vehicleRepository.existsById(id)) {
-            throw new IllegalArgumentException("Vehicle not found with id: " + id);
+        String requiredId = requireNonBlank(id, "id");
+        if (!vehicleRepository.existsById(Objects.requireNonNull(requiredId, "id"))) {
+            throw new IllegalArgumentException("Vehicle not found with id: " + requiredId);
         }
-        vehicleRepository.deleteById(id);
+        vehicleRepository.deleteById(Objects.requireNonNull(requiredId, "id"));
     }
 
     public void setAdminHold(String id, boolean onHold) {
         logger.debug("Setting admin hold for vehicle id={} to {}", id, onHold);
-        Optional<Vehicle> existing = vehicleRepository.findById(id);
-        if (existing.isEmpty()) {
-            throw new IllegalArgumentException("Vehicle not found with id: " + id);
-        }
-
-        Vehicle vehicle = existing.get();
+        String requiredId = requireNonBlank(id, "id");
+        Vehicle vehicle = vehicleRepository.findById(Objects.requireNonNull(requiredId, "id"))
+                .orElseThrow(() -> new IllegalArgumentException("Vehicle not found with id: " + requiredId));
         vehicle.setAdminHeld(onHold);
-        vehicleRepository.save(vehicle);
+        vehicleRepository.save(Objects.requireNonNull(vehicle, "vehicle"));
+    }
+
+    private String requireNonBlank(String value, String fieldName) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(fieldName + " must be provided");
+        }
+        return value;
     }
 
     private VehicleSummaryDto convertToDto(Vehicle vehicle) {

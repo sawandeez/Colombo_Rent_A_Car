@@ -16,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Objects;
 
 @Slf4j
 @Configuration
@@ -76,7 +77,7 @@ public class DataSeeder {
             VehicleType sedan = new VehicleType("Sedan");
             VehicleType van = new VehicleType("Van");
 
-            typeRepo.saveAll(List.of(suv, sedan, van));
+            typeRepo.saveAll(Objects.requireNonNull(List.of(suv, sedan, van), "vehicle types"));
 
             log.info("Seeded vehicle types: SUV, Sedan, Van");
         } catch (Exception e) {
@@ -138,7 +139,7 @@ public class DataSeeder {
             v3.setImageUrls(List.of("https://example.com/transit.jpg"));
             v3.setAvailable(false);
 
-            vehicleRepo.saveAll(List.of(v1, v2, v3));
+            vehicleRepo.saveAll(Objects.requireNonNull(List.of(v1, v2, v3), "vehicles"));
 
             log.info("Seeded vehicles: Toyota RAV4, Honda Civic, Ford Transit");
         } catch (Exception e) {

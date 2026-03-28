@@ -3,6 +3,7 @@ package com.example.backend.controller;
 import com.example.backend.dto.AuthResponse;
 import com.example.backend.dto.LoginRequest;
 import com.example.backend.dto.RegisterRequest;
+import com.example.backend.dto.UpdateProfileRequest;
 import com.example.backend.model.User;
 import com.example.backend.repository.UserRepository;
 import com.example.backend.service.AuthService;
@@ -21,11 +22,13 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Objects;
 
 @RestController
 @RequiredArgsConstructor
@@ -58,6 +61,15 @@ public class AuthController {
     @GetMapping("/api/v1/profile")
     public ResponseEntity<AuthResponse> getProfile() {
         return ResponseEntity.ok(buildAuthenticatedProfileResponse());
+    }
+
+    @PutMapping("/api/v1/profile")
+    public ResponseEntity<AuthResponse> updateProfile(@RequestBody @Valid UpdateProfileRequest request) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || auth instanceof AnonymousAuthenticationToken) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not authenticated");
+        }
+        return ResponseEntity.ok(service.updateProfile(auth.getName(), request));
     }
 
     @GetMapping("/api/users/me/documents/nic-front")
@@ -97,6 +109,9 @@ public class AuthController {
         return AuthResponse.builder()
                 .email(user.getEmail())
                 .name(user.getName())
+                .phone(user.getPhone())
+                .district(user.getDistrict())
+                .city(user.getCity())
                 .role(user.getRole().name())
                 .roles(List.of("ROLE_" + user.getRole().name()))
                 .tokenType("Bearer")
@@ -108,8 +123,13 @@ public class AuthController {
                 .filename(document.fileName())
                 .build();
 
+        String contentType = Objects.requireNonNullElse(
+            document.contentType(),
+            MediaType.APPLICATION_OCTET_STREAM_VALUE
+        );
+
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(document.contentType()))
+            .contentType(MediaType.parseMediaType(Objects.requireNonNull(contentType, "contentType")))
                 .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString())
                 .body(document.resource());
     }

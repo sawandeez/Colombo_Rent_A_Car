@@ -39,6 +39,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
@@ -137,8 +138,9 @@ public class BookingService {
 
     public BookingResponse getBooking(String id) {
         User user = getAuthenticatedUser();
-        Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Booking not found: " + id));
+        String bookingId = requireNonBlank(id, "id");
+        Booking booking = bookingRepository.findById(Objects.requireNonNull(bookingId, "id"))
+            .orElseThrow(() -> new IllegalArgumentException("Booking not found: " + bookingId));
         enforceOwnerOrAdmin(user, booking.getUserId());
         return toFullDto(booking);
     }
@@ -146,8 +148,9 @@ public class BookingService {
     @Transactional
     public void cancelBooking(String bookingId) {
         User user = getAuthenticatedUser();
-        Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new IllegalArgumentException("Booking not found: " + bookingId));
+        String requiredBookingId = requireNonBlank(bookingId, "bookingId");
+        Booking booking = bookingRepository.findById(Objects.requireNonNull(requiredBookingId, "bookingId"))
+            .orElseThrow(() -> new IllegalArgumentException("Booking not found: " + requiredBookingId));
         enforceOwnerOrAdmin(user, booking.getUserId());
 
         if (booking.getStatus() == BookingStatus.CANCELLED) {
@@ -183,8 +186,9 @@ public class BookingService {
 
     @Transactional
     public void approveBooking(String bookingId) {
-        Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new IllegalArgumentException("Booking not found: " + bookingId));
+        String requiredBookingId = requireNonBlank(bookingId, "bookingId");
+        Booking booking = bookingRepository.findById(Objects.requireNonNull(requiredBookingId, "bookingId"))
+            .orElseThrow(() -> new IllegalArgumentException("Booking not found: " + requiredBookingId));
 
         if (booking.getStatus() != BookingStatus.PENDING) {
             throw new IllegalStateException("Only PENDING bookings can be approved");
@@ -192,7 +196,7 @@ public class BookingService {
 
         List<Booking> overlaps = bookingRepository.findOverlappingBookings(
                 booking.getVehicleId(), booking.getStartDate(), booking.getEndDate());
-        boolean hasRealOverlap = overlaps.stream().anyMatch(existing -> !existing.getId().equals(bookingId));
+        boolean hasRealOverlap = overlaps.stream().anyMatch(existing -> !existing.getId().equals(requiredBookingId));
         if (hasRealOverlap) {
             throw new IllegalStateException("Cannot approve due to an overlapping booking");
         }
@@ -203,8 +207,9 @@ public class BookingService {
 
     @Transactional
     public void rejectBooking(String bookingId, String reason) {
-        Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new IllegalArgumentException("Booking not found: " + bookingId));
+        String requiredBookingId = requireNonBlank(bookingId, "bookingId");
+        Booking booking = bookingRepository.findById(Objects.requireNonNull(requiredBookingId, "bookingId"))
+            .orElseThrow(() -> new IllegalArgumentException("Booking not found: " + requiredBookingId));
 
         if (booking.getStatus() != BookingStatus.PENDING) {
             throw new IllegalStateException("Only PENDING bookings can be rejected");
@@ -221,8 +226,9 @@ public class BookingService {
             throw new IllegalArgumentException("Advance amount must be greater than zero");
         }
 
-        Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new IllegalArgumentException("Booking not found: " + bookingId));
+        String requiredBookingId = requireNonBlank(bookingId, "bookingId");
+        Booking booking = bookingRepository.findById(Objects.requireNonNull(requiredBookingId, "bookingId"))
+            .orElseThrow(() -> new IllegalArgumentException("Booking not found: " + requiredBookingId));
 
         if (booking.getStatus() != BookingStatus.APPROVED) {
             throw new IllegalStateException("Advance amount can only be set for APPROVED bookings");
@@ -247,8 +253,9 @@ public class BookingService {
         if (currentUser.getRole() != UserRole.ADMIN) {
             throw new ResponseStatusException(FORBIDDEN, "Admin role required");
         }
-        User targetUser = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "User not found: " + userId));
+        String requiredUserId = requireNonBlank(userId, "userId");
+        User targetUser = userRepository.findById(Objects.requireNonNull(requiredUserId, "userId"))
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "User not found: " + requiredUserId));
         return loadUserDocument(targetUser, true);
     }
 
@@ -257,8 +264,9 @@ public class BookingService {
         if (currentUser.getRole() != UserRole.ADMIN) {
             throw new ResponseStatusException(FORBIDDEN, "Admin role required");
         }
-        User targetUser = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "User not found: " + userId));
+        String requiredUserId = requireNonBlank(userId, "userId");
+        User targetUser = userRepository.findById(Objects.requireNonNull(requiredUserId, "userId"))
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "User not found: " + requiredUserId));
         return loadUserDocument(targetUser, false);
     }
 
@@ -272,8 +280,9 @@ public class BookingService {
     }
 
     private void getBookableVehicle(String vehicleId) {
-        Vehicle vehicle = vehicleRepository.findById(vehicleId)
-                .orElseThrow(() -> new IllegalArgumentException("Vehicle not found: " + vehicleId));
+        String requiredVehicleId = requireNonBlank(vehicleId, "vehicleId");
+        Vehicle vehicle = vehicleRepository.findById(Objects.requireNonNull(requiredVehicleId, "vehicleId"))
+                .orElseThrow(() -> new IllegalArgumentException("Vehicle not found: " + requiredVehicleId));
 
         if (!vehicle.isAvailable() || vehicle.isUnderMaintenance() || vehicle.isAdminHeld()) {
             throw new IllegalStateException("Vehicle is not available for booking");
@@ -356,7 +365,7 @@ public class BookingService {
         }
 
         try {
-            Resource resource = new UrlResource(filePath.toUri());
+            Resource resource = new UrlResource(Objects.requireNonNull(filePath.toUri(), "file URI"));
             if (!resource.exists()) {
                 throw new ResponseStatusException(NOT_FOUND, "Stored document file not found");
             }
@@ -404,13 +413,23 @@ public class BookingService {
         return value != null && !value.isBlank();
     }
 
+    private String requireNonBlank(String value, String fieldName) {
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException(fieldName + " is required");
+        }
+        return value;
+    }
+
     public record DocumentContent(Resource resource, String contentType, String fileName) {
     }
 
     private BookingResponse toFullDto(Booking booking) {
         BookingResponse response = bookingMapper.toDto(booking);
-        vehicleRepository.findById(booking.getVehicleId())
-                .ifPresent(vehicle -> response.setVehicle(toVehicleSummaryDto(vehicle)));
+        String vehicleId = booking.getVehicleId();
+        if (isPresent(vehicleId)) {
+            vehicleRepository.findById(Objects.requireNonNull(vehicleId, "vehicleId"))
+                    .ifPresent(vehicle -> response.setVehicle(toVehicleSummaryDto(vehicle)));
+        }
         return response;
     }
 

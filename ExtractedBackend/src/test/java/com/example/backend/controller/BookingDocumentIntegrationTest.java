@@ -24,6 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -56,10 +57,12 @@ class BookingDocumentIntegrationTest {
     private Path uploadDir;
 
     @BeforeEach
+    @SuppressWarnings("null")
     void setUp() throws IOException {
         uploadDir = Files.createTempDirectory("booking-doc-it");
-        ReflectionTestUtils.setField(bookingService, "uploadBaseDir", uploadDir.toString());
-        ReflectionTestUtils.setField(bookingService, "maxFileSizeBytes", 5 * 1024 * 1024L);
+        BookingService requiredBookingService = Objects.requireNonNull(bookingService, "bookingService");
+        ReflectionTestUtils.setField(requiredBookingService, "uploadBaseDir", uploadDir.toString());
+        ReflectionTestUtils.setField(requiredBookingService, "maxFileSizeBytes", 5 * 1024 * 1024L);
 
         Vehicle vehicle = new Vehicle();
         vehicle.setId("veh-1");
@@ -70,13 +73,13 @@ class BookingDocumentIntegrationTest {
         when(vehicleRepository.findById("veh-1")).thenReturn(Optional.of(vehicle));
         when(bookingRepository.findOverlappingBookings(eq("veh-1"), any(), any())).thenReturn(List.of());
         when(bookingRepository.save(any(Booking.class))).thenAnswer(invocation -> {
-            Booking booking = invocation.getArgument(0);
+            Booking booking = Objects.requireNonNull(invocation.getArgument(0), "booking");
             if (booking.getId() == null) {
                 booking.setId("booking-1");
             }
             return booking;
         });
-        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> Objects.requireNonNull(invocation.getArgument(0), "user"));
     }
 
     @Test
@@ -90,9 +93,9 @@ class BookingDocumentIntegrationTest {
         MockMultipartFile drivingLicense = new MockMultipartFile("drivingLicense", "license.png", "image/png", "license".getBytes());
 
         mockMvc.perform(multipart("/api/v1/bookings")
-                        .file(bookingJson)
-                        .file(nicFront)
-                        .file(drivingLicense))
+                .file(Objects.requireNonNull(bookingJson, "bookingJson"))
+                .file(Objects.requireNonNull(nicFront, "nicFront"))
+                .file(Objects.requireNonNull(drivingLicense, "drivingLicense")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.userId").value("u-1"))
                 .andExpect(jsonPath("$.nicFrontPath").exists())
@@ -113,7 +116,7 @@ class BookingDocumentIntegrationTest {
         MockMultipartFile bookingJson = bookingPart(nowPlusDays(2), nowPlusDays(4));
 
         mockMvc.perform(multipart("/api/v1/bookings")
-                        .file(bookingJson))
+                .file(Objects.requireNonNull(bookingJson, "bookingJson")))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.nicFrontPath").value("user-docs/u-1/nic-front-existing.jpg"))
                 .andExpect(jsonPath("$.drivingLicensePath").value("user-docs/u-1/driving-license-existing.png"));
@@ -128,9 +131,12 @@ class BookingDocumentIntegrationTest {
         MockMultipartFile bookingJson = bookingPart(nowPlusDays(1), nowPlusDays(2));
 
         mockMvc.perform(multipart("/api/v1/bookings")
-                        .file(bookingJson))
+                .file(Objects.requireNonNull(bookingJson, "bookingJson")))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("drivingLicense is required")));
+            .andExpect(jsonPath("$.message").value(Objects.requireNonNull(
+                org.hamcrest.Matchers.containsString("drivingLicense is required"),
+                "matcher"
+            )));
     }
 
     @Test
@@ -144,11 +150,14 @@ class BookingDocumentIntegrationTest {
         MockMultipartFile drivingLicense = new MockMultipartFile("drivingLicense", "license.png", "image/png", "ok".getBytes());
 
         mockMvc.perform(multipart("/api/v1/bookings")
-                        .file(bookingJson)
-                        .file(nicFront)
-                        .file(drivingLicense))
+                .file(Objects.requireNonNull(bookingJson, "bookingJson"))
+                .file(Objects.requireNonNull(nicFront, "nicFront"))
+                .file(Objects.requireNonNull(drivingLicense, "drivingLicense")))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("image/jpeg or image/png")));
+            .andExpect(jsonPath("$.message").value(Objects.requireNonNull(
+                org.hamcrest.Matchers.containsString("image/jpeg or image/png"),
+                "matcher"
+            )));
     }
 
     @Test
@@ -163,11 +172,14 @@ class BookingDocumentIntegrationTest {
         MockMultipartFile drivingLicense = new MockMultipartFile("drivingLicense", "license.png", "image/png", "ok".getBytes());
 
         mockMvc.perform(multipart("/api/v1/bookings")
-                        .file(bookingJson)
-                        .file(nicFront)
-                        .file(drivingLicense))
+                .file(Objects.requireNonNull(bookingJson, "bookingJson"))
+                .file(Objects.requireNonNull(nicFront, "nicFront"))
+                .file(Objects.requireNonNull(drivingLicense, "drivingLicense")))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("5MB size limit")));
+            .andExpect(jsonPath("$.message").value(Objects.requireNonNull(
+                org.hamcrest.Matchers.containsString("5MB size limit"),
+                "matcher"
+            )));
     }
 
     @Test

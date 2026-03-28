@@ -15,6 +15,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Objects;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -40,6 +41,7 @@ class VehicleServiceTest {
     }
 
     @Test
+    @SuppressWarnings("null")
     void createVehicleMapsAllExtendedFields() {
         VehicleUpsertRequestDto request = new VehicleUpsertRequestDto();
         request.setName("Suzuki Wagon R Hybrid");
@@ -59,7 +61,7 @@ class VehicleServiceTest {
         request.setIsAdminHeld(false);
 
         when(vehicleRepository.save(any(Vehicle.class))).thenAnswer(invocation -> {
-            Vehicle saved = invocation.getArgument(0);
+            Vehicle saved = Objects.requireNonNull(invocation.getArgument(0), "vehicle");
             saved.setId("veh-1");
             return saved;
         });
@@ -68,7 +70,7 @@ class VehicleServiceTest {
 
         ArgumentCaptor<Vehicle> captor = ArgumentCaptor.forClass(Vehicle.class);
         verify(vehicleRepository).save(captor.capture());
-        Vehicle saved = captor.getValue();
+        Vehicle saved = Objects.requireNonNull(captor.getValue(), "saved vehicle");
 
         assertEquals("Suzuki", saved.getMake());
         assertEquals("Wagon R Hybrid", saved.getModel());
@@ -91,11 +93,12 @@ class VehicleServiceTest {
     }
 
     @Test
+    @SuppressWarnings("null")
     void createVehicleUsesDefaultFlagsWhenMissing() {
         VehicleUpsertRequestDto request = new VehicleUpsertRequestDto();
         request.setName("Default Flag Car");
 
-        when(vehicleRepository.save(any(Vehicle.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(vehicleRepository.save(any(Vehicle.class))).thenAnswer(invocation -> Objects.requireNonNull(invocation.getArgument(0), "vehicle"));
 
         VehicleSummaryDto response = vehicleService.createVehicle(request);
 

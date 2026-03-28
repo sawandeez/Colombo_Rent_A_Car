@@ -16,6 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.boot.test.mock.mockito.MockBean;
 
 import java.util.List;
+import java.util.Objects;
 
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -56,7 +57,7 @@ class SecurityConfigurationStartupTest {
 
         mockMvc.perform(get("/api/v1/vehicles").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
-                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+            .andExpect(content().contentTypeCompatibleWith(Objects.requireNonNull(MediaType.APPLICATION_JSON, "application/json")))
                 .andExpect(jsonPath("$[0].name").value("Car1"));
     }
 }

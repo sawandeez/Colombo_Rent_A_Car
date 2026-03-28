@@ -62,6 +62,9 @@ public class AuthService {
                 .tokenType("Bearer")
                 .email(user.getEmail())
                 .name(user.getName())
+                .phone(user.getPhone())
+                .district(user.getDistrict())
+                .city(user.getCity())
                 .role(user.getRole().name())
                 .roles(List.of("ROLE_" + user.getRole().name()))
                 .build();
@@ -89,6 +92,35 @@ public class AuthService {
                 .roles(List.of("ROLE_" + user.getRole().name()))
                 .build();
         log.debug("LOGIN_RESPONSE - email={}, role={}, roles={}", response.getEmail(), response.getRole(), response.getRoles());
+        return response;
+    }
+
+    public AuthResponse updateProfile(String currentEmail, com.example.backend.dto.UpdateProfileRequest request) {
+        var user = userRepository.findByEmail(currentEmail)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        user.setName(request.getName());
+        user.setPhone(request.getPhone());
+        user.setDistrict(request.getDistrict());
+        user.setCity(request.getCity());
+
+        userRepository.save(user);
+        log.info("PROFILE_UPDATE - User updated profile: {}", currentEmail);
+
+        String jwtToken = jwtService.generateToken(buildUserDetails(user));
+
+        AuthResponse response = AuthResponse.builder()
+                .token(jwtToken)
+                .accessToken(jwtToken)
+                .tokenType("Bearer")
+                .email(user.getEmail())
+                .name(user.getName())
+                .phone(user.getPhone())
+                .district(user.getDistrict())
+                .city(user.getCity())
+                .role(user.getRole().name())
+                .roles(List.of("ROLE_" + user.getRole().name()))
+                .build();
         return response;
     }
 

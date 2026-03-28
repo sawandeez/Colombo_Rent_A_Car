@@ -22,4 +22,7 @@ public class AuthResponse {
     private String role;
     private List<String> roles;
     private String name;
+    private String phone;
+    private String district;
+    private String city;
 }

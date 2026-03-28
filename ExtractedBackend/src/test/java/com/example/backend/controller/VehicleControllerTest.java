@@ -51,8 +51,10 @@ public class VehicleControllerTest {
 
         var response = controller.getAllVehicles();
         assertTrue(response.getStatusCode().is2xxSuccessful());
-        assertEquals(1, response.getBody().size());
-        assertEquals("Car1", response.getBody().get(0).getName());
+        var body = response.getBody();
+        assertNotNull(body);
+        assertEquals(1, body.size());
+        assertEquals("Car1", body.get(0).getName());
     }
 
     @Test
