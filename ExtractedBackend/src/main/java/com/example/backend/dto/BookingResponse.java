@@ -21,6 +21,7 @@ public class BookingResponse {
     private LocalDateTime endDate;
     private BookingStatus status;
     private BigDecimal advanceAmount;
+    private String advanceCurrency;
     private BigDecimal totalPrice;
     private boolean advancePaid;
     private PaymentStatus paymentStatus;

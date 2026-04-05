@@ -1,6 +1,5 @@
 package com.example.backend.model;
 
-import com.example.backend.model.PaymentStatus;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -25,6 +24,7 @@ public class Booking {
     private BookingStatus status;
 
     private BigDecimal advanceAmount;
+    private String advanceCurrency;
     private boolean advancePaid = false;
     private PaymentStatus paymentStatus;
     private Instant paymentDate;

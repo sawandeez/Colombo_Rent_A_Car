@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -24,6 +25,9 @@ public class BookingCreateRequest {
     // Optional compatibility fields used by newer frontend payloads.
     private String pickupDateTime;
     private String returnDateTime;
+
+    // Optional: 25% advance amount pre-calculated by frontend; stored as advanceAmount if > 0.
+    private BigDecimal estimatedAdvanceAmount;
 
     public void setStartDate(String startDate) {
         this.startDate = startDate;
