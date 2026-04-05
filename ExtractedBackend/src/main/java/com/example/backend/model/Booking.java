@@ -1,10 +1,12 @@
 package com.example.backend.model;
 
+import com.example.backend.model.PaymentStatus;
 import lombok.Data;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 @Data
@@ -24,6 +26,8 @@ public class Booking {
 
     private BigDecimal advanceAmount;
     private boolean advancePaid = false;
+    private PaymentStatus paymentStatus;
+    private Instant paymentDate;
 
     private String rejectionReason;
 
