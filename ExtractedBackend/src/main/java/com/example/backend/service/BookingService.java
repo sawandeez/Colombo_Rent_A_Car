@@ -415,6 +415,8 @@ public class BookingService {
         response.setStatus(booking.getStatus());
         response.setAdvanceAmount(booking.getAdvanceAmount());
         response.setAdvancePaid(booking.isAdvancePaid());
+        response.setPaymentStatus(booking.getPaymentStatus());
+        response.setPaymentDate(booking.getPaymentDate());
         response.setRejectionReason(booking.getRejectionReason());
         response.setNicFrontDocumentId(booking.getNicFrontDocumentId());
         response.setDrivingLicenseDocumentId(booking.getDrivingLicenseDocumentId());

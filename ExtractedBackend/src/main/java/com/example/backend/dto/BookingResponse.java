@@ -1,9 +1,11 @@
 package com.example.backend.dto;
 
 import com.example.backend.model.BookingStatus;
+import com.example.backend.model.PaymentStatus;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 @Data
@@ -21,6 +23,8 @@ public class BookingResponse {
     private BigDecimal advanceAmount;
     private BigDecimal totalPrice;
     private boolean advancePaid;
+    private PaymentStatus paymentStatus;
+    private Instant paymentDate;
     private String rejectionReason;
     private String nicFrontDocumentId;
     private String drivingLicenseDocumentId;
