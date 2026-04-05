@@ -36,9 +36,9 @@ import java.util.List;
 import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -113,15 +113,42 @@ class BookingDocumentIntegrationTest {
         // Spring's ConversionService converts "NIC_FRONT" → DocumentCategory.NIC_FRONT.
         mockMvc.perform(multipart("/api/v1/users/me/documents")
                         .file(new MockMultipartFile("file", "nic-front.pdf", "application/pdf", "bytes".getBytes()))
-                        .param("category", "NIC_FRONT"))
+                        .param("category", "NIC_FRONT")
+                        .param("consentAccepted", "true"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.id").value("doc-1"))
-                .andExpect(jsonPath("$.category").value("NIC_FRONT"));
+                .andExpect(jsonPath("$.category").value("NIC_FRONT"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .string("X-Privacy-Notice", "Documents will be deleted after 48 hours"));
+
+        mockMvc.perform(get("/api/v1/users/me/documents"))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .string("X-Privacy-Notice", "Documents will be deleted after 48 hours"));
 
         mockMvc.perform(get("/api/v1/users/me/documents/doc-1"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("application/pdf"));
+    }
+
+    @Test
+    @WithMockUser(username = "customer@example.com", roles = "CUSTOMER")
+    void documentUploadIsBlockedWhenConsentNotAccepted() throws Exception {
+        mockMvc.perform(multipart("/api/v1/users/me/documents")
+                        .file(new MockMultipartFile("file", "nic-front.pdf", "application/pdf", "bytes".getBytes()))
+                        .param("category", "NIC_FRONT")
+                        .param("consentAccepted", "false"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Consent is required before document upload"));
+
+        mockMvc.perform(multipart("/api/v1/users/me/documents")
+                        .file(new MockMultipartFile("file", "nic-front.pdf", "application/pdf", "bytes".getBytes()))
+                        .param("category", "NIC_FRONT"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Consent is required before document upload"));
+
+        verifyNoInteractions(userDocumentService);
     }
 
     @Test

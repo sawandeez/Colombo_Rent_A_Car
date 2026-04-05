@@ -26,18 +26,31 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UserDocumentController {
 
+    public static final String DOCUMENT_PRIVACY_NOTICE = "Documents will be deleted after 48 hours";
+
     private final UserDocumentService userDocumentService;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<UserDocumentMetadataResponse> upload(
             @RequestPart("file") MultipartFile file,
-            @RequestParam("category") DocumentCategory category) {
-        return ResponseEntity.ok(userDocumentService.uploadForCurrentUser(file, category));
+            @RequestParam("category") DocumentCategory category,
+            @RequestParam(value = "consentAccepted", required = false) Boolean consentAccepted) {
+        if (!Boolean.TRUE.equals(consentAccepted)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST,
+                    "Consent is required before document upload");
+        }
+
+        return ResponseEntity.ok()
+                .header("X-Privacy-Notice", DOCUMENT_PRIVACY_NOTICE)
+                .body(userDocumentService.uploadForCurrentUser(file, category));
     }
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<List<UserDocumentMetadataResponse>> listMine() {
-        return ResponseEntity.ok(userDocumentService.listCurrentUserDocuments());
+        return ResponseEntity.ok()
+                .header("X-Privacy-Notice", DOCUMENT_PRIVACY_NOTICE)
+                .body(userDocumentService.listCurrentUserDocuments());
     }
 
     @GetMapping("/{documentId}")
