@@ -2,6 +2,7 @@ package com.example.backend.controller;
 
 import com.example.backend.dto.BookingRejectRequest;
 import com.example.backend.dto.BookingResponse;
+import com.example.backend.dto.SetAdvanceAmountRequest;
 import com.example.backend.model.BookingStatus;
 import com.example.backend.service.BookingService;
 import jakarta.validation.Valid;
@@ -9,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -39,5 +41,16 @@ public class AdminBookingController {
     public ResponseEntity<Void> rejectBooking(@PathVariable String id, @RequestBody(required = false) @Valid BookingRejectRequest request) {
         bookingService.rejectBooking(id, request == null ? "Rejected by admin" : request.getReason());
         return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/{id}/advance-amount")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SPECIAL_ADMIN')")
+    public ResponseEntity<BookingResponse> setAdvanceAmount(
+            @PathVariable String id,
+            @RequestBody @Valid SetAdvanceAmountRequest request) {
+        return ResponseEntity.ok(bookingService.setAdvanceAmount(
+                id,
+                request.getAdvanceAmount(),
+                request.getAdvanceCurrency()));
     }
 }

@@ -93,6 +93,13 @@ public class BookingService {
         booking.setNicFrontDocumentId(nicFrontDocumentId);
         booking.setDrivingLicenseDocumentId(drivingLicenseDocumentId);
 
+        // Store frontend-estimated advance amount if provided and > 0 (backwards-compatible).
+        if (request.getEstimatedAdvanceAmount() != null
+                && request.getEstimatedAdvanceAmount().compareTo(BigDecimal.ZERO) > 0) {
+            booking.setAdvanceAmount(request.getEstimatedAdvanceAmount());
+            booking.setAdvanceCurrency("LKR");
+        }
+
         return toFullDto(bookingRepository.save(booking));
     }
 
@@ -190,6 +197,22 @@ public class BookingService {
 
         booking.setStatus(BookingStatus.APPROVED);
         bookingRepository.save(booking);
+    }
+
+    @Transactional
+    public BookingResponse setAdvanceAmount(String bookingId, BigDecimal amount, String currency) {
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Booking not found: " + bookingId));
+
+
+        booking.setAdvanceAmount(amount);
+
+        String resolvedCurrency = (currency != null && !currency.isBlank())
+                ? currency.trim().toUpperCase(Locale.ROOT)
+                : "LKR";
+        booking.setAdvanceCurrency(resolvedCurrency);
+
+        return toFullDto(bookingRepository.save(booking));
     }
 
     @Transactional
@@ -414,6 +437,7 @@ public class BookingService {
         response.setEndDate(booking.getEndDate());
         response.setStatus(booking.getStatus());
         response.setAdvanceAmount(booking.getAdvanceAmount());
+        response.setAdvanceCurrency(booking.getAdvanceCurrency());
         response.setAdvancePaid(booking.isAdvancePaid());
         response.setPaymentStatus(booking.getPaymentStatus());
         response.setPaymentDate(booking.getPaymentDate());
